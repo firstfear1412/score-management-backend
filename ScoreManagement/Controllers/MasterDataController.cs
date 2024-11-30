@@ -69,7 +69,7 @@ namespace ScoreManagement.Controllers
             //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
             return StatusCode(200, new
             {
-                result = isSuccess,
+                isSuccess = isSuccess,
                 message = message,
                 data = lst
             });

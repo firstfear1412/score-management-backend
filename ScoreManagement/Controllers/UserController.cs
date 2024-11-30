@@ -21,10 +21,12 @@ namespace ScoreManagement.Controllers
     {
         private readonly demoDB _context;
         private readonly IEncryptService _encryptService;
-        public UserController(demoDB context, IEncryptService encryptService)
+        private readonly IConfiguration _configuration;
+        public UserController(demoDB context, IEncryptService encryptService, IConfiguration configuration)
         {
             _context = context;
             _encryptService = encryptService;
+            _configuration = configuration;
         }
         [AllowAnonymous]
         [HttpPost("GetToken")]
@@ -90,12 +92,6 @@ namespace ScoreManagement.Controllers
                               expires: DateTime.UtcNow.AddHours(MaxTokenHour),
                               signingCredentials: creds);
 
-                            //var tokenResult = new
-
-                            //{
-                            //    token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                            //    expiration = jwtToken.ValidTo
-                            //};
                             users.date_login = DateTime.Now;
                             users.update_date = DateTime.Now;
                             users.total_failed = 0;
@@ -162,61 +158,43 @@ namespace ScoreManagement.Controllers
             //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
             return StatusCode(200, new
             {
-                result = isSuccess,
+                isSuccess = isSuccess,
                 message = message,
                 tokenResult = tokenResult
             });
         }
 
         [AllowAnonymous]
-        [HttpPost("create/passmanual")]
+        [HttpPost("create/manual")]
         public async Task<IActionResult> CreatUserManual([FromBody] User model)
         {
-            var ErrorMessage = new ErrorMessage();
-            const int Pbkdf2SubkeyLength = 256 / 8; // 256 bits
-            const int SaltSize = 128 / 8; // 128 bits
-            string passHash = _encryptService.Hash(model.password, "sha256");
-            byte[] salt = new byte[SaltSize];
-            string hashedPasswordBase64 = "";
-            bool isError = false;
-            string massage = "";
+
+            bool isSuccess = false;
+            string message = string.Empty;
+            string hashedPasswordBase64 = string.Empty;
             try
             {
-                if (!string.IsNullOrEmpty(model.password))
+                hashedPasswordBase64 = _encryptService.EncryptPassword(model.password);
+                if (!string.IsNullOrEmpty(hashedPasswordBase64))
                 {
-                    using (var rng = RandomNumberGenerator.Create())
-                    {
-                        rng.GetBytes(salt);
-                    }
-
-                    using (var pbkdf2 = new Rfc2898DeriveBytes(model.password, salt, 1000, HashAlgorithmName.SHA1))
-                    {
-                        byte[] subkey = pbkdf2.GetBytes(Pbkdf2SubkeyLength);
-
-                        byte[] decodedHashedPassword = new byte[1 + SaltSize + Pbkdf2SubkeyLength];
-                        decodedHashedPassword[0] = 0x00;
-                        Buffer.BlockCopy(salt, 0, decodedHashedPassword, 1, SaltSize);
-                        Buffer.BlockCopy(subkey, 0, decodedHashedPassword, 1 + SaltSize, Pbkdf2SubkeyLength);
-                        hashedPasswordBase64 = Convert.ToBase64String(decodedHashedPassword);
-                        isError = true;
-                    }
+                    isSuccess = true;
+                    message = "Password encoded successfully.";
                 }
                 else
                 {
-                    isError = false;
-                    massage = "Password is empty";
+                    message = "Password is empty or invalid.";
                 }
             }
             catch (Exception ex)
             {
-                isError = false;
-                massage = ex.Message.ToString();
+                isSuccess = false;
+                message = ex.Message.ToString();
             }
             var response = new
             {
-                IsError = isError,
-                Massage = massage,
-                HashedPassword = hashedPasswordBase64
+                isSuccess = isSuccess,
+                message = message,
+                hashedPassword = hashedPasswordBase64
             };
             return Ok(response);
         }
