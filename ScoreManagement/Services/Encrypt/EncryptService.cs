@@ -37,9 +37,9 @@ namespace ScoreManagement.Services.Encrypt
         private bool VerifyHashedPasswordV2(byte[] hashedPassword, string password)
         {
             const KeyDerivationPrf Pbkdf2Prf = KeyDerivationPrf.HMACSHA256; // default for Rfc2898DeriveBytes
-            int pbkdf2IterCount = int.Parse(_configuration["Encryption:Pbkdf2IterCount"]);
-            int pbkdf2SubkeyLength = int.Parse(_configuration["Encryption:Pbkdf2SubkeyLength"]);
-            int saltSize = int.Parse(_configuration["Encryption:SaltSize"]);
+            int pbkdf2IterCount = int.Parse(_configuration["Encryption:Pbkdf2IterCount"]!);
+            int pbkdf2SubkeyLength = int.Parse(_configuration["Encryption:Pbkdf2SubkeyLength"]!);
+            int saltSize = int.Parse(_configuration["Encryption:SaltSize"]!);
 
             if (hashedPassword.Length != 1 + saltSize + pbkdf2SubkeyLength)
             {
@@ -58,9 +58,9 @@ namespace ScoreManagement.Services.Encrypt
 
         public string EncryptPassword(string password)
         {
-            int pbkdf2IterCount = int.Parse(_configuration["Encryption:Pbkdf2IterCount"]);
-            int pbkdf2SubkeyLength = int.Parse(_configuration["Encryption:Pbkdf2SubkeyLength"]);
-            int saltSize = int.Parse(_configuration["Encryption:SaltSize"]);
+            int pbkdf2IterCount = int.Parse(_configuration["Encryption:Pbkdf2IterCount"]!);
+            int pbkdf2SubkeyLength = int.Parse(_configuration["Encryption:Pbkdf2SubkeyLength"]!);
+            int saltSize = int.Parse(_configuration["Encryption:SaltSize"]!);
             byte[] salt = new byte[saltSize];
             string hashedPasswordBase64 = "";
             if (!string.IsNullOrEmpty(password))

@@ -1,27 +1,21 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ScoreManagement.Model.Table.Subject;
-using ScoreManagement.Model.Table.Student;
-using ScoreManagement.Model.Table.User;
-using ScoreManagement.Model.Table.SubjectScore;
-using ScoreManagement.Model.Table.Language;
-using ScoreManagement.Model.Table.SystemParam;
-using ScoreManagement.Model.Table.WebEvent;
+using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Entity
 {
-    public class demoDB : DbContext
+    public class scoreDB : DbContext
     {
-        public demoDB() { }
-        public demoDB(DbContextOptions<demoDB> options):base(options){ }
+        public scoreDB() { }
+        public scoreDB(DbContextOptions<scoreDB> options):base(options){ }
 
         //***** DbSet *****//
         public DbSet<User> Users { get; set; }
         public DbSet<Language> Languages { get; set; }
         public DbSet<SystemParam> SystemParams { get; set; }
         public DbSet<WebEvent_Logs> WebEvent_Logs { get; set; }
-        public DbSet<SubjectResource> Subjects { get; set; }
+        public DbSet<Subject> Subjects { get; set; }
         public DbSet<Student> Students { get; set; }
-        public DbSet<SubjectScoreResource> SubjectScores { get; set; }
+        public DbSet<SubjectScore> SubjectScores { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,7 +36,7 @@ namespace ScoreManagement.Entity
                 .ToTable("WebEvent_Logs")
                 .HasKey(a => new { a.event_id });
             modelBuilder
-                .Entity<SubjectResource>()
+                .Entity<Subject>()
                 .ToTable("Subject")
                 .HasKey(a => new { a.row_id });
             modelBuilder
@@ -50,7 +44,7 @@ namespace ScoreManagement.Entity
                 .ToTable("Student")
                 .HasKey(a => new { a.row_id });
             modelBuilder
-                .Entity<SubjectScoreResource>()
+                .Entity<SubjectScore>()
                 .ToTable("SubjectScore")
                 .HasKey(a => new { a.row_id });
         }

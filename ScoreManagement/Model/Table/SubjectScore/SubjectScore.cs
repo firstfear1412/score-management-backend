@@ -1,4 +1,4 @@
-﻿namespace ScoreManagement.Model.Table.SubjectScore
+﻿namespace ScoreManagement.Model.Table
 {
     public class SubjectScore
     {

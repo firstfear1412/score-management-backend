@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Table.Subject
+namespace ScoreManagement.Model
 {
     public class SubjectResource
     {

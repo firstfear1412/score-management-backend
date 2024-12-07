@@ -1,37 +1,61 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
-using ScoreManagement.Model.Table.SystemParam;
+using ScoreManagement.Model;
+using ScoreManagement.Model.Table;
 using ScoreManagement.Services.Encrypt;
 
 namespace ScoreManagement.Controllers
 {
-    [Route("api")]
+    [Authorize]
+    [Route("api/[controller]")]
     [ApiController]
-    public class MasterDataController : Controller
+    public class MasterDataController : BaseController
     {
-        private readonly demoDB _context;
-        public MasterDataController(demoDB context)
+        private readonly scoreDB _context;
+        public MasterDataController(scoreDB context)
         {
             _context = context;
         }
         [AllowAnonymous]
-        [HttpGet("lang")]
-        public async Task<IActionResult> GetLanguage()
+        [HttpGet("Language")]
+        public async Task<IActionResult> GetLanguage(string language)
         {
-            var translation = await _context.Languages.ToListAsync();
-
-            var result = new
+            bool isSuccess = false;
+            string message = string.Empty;
+            if (string.IsNullOrEmpty(language))
             {
-                en = translation.ToDictionary(t => t.message_key, t => t.message_en),
-                th = translation.ToDictionary(t => t.message_key, t => t.message_th),
-            };
-            return StatusCode(200, result);
+                message = "Language parameter is required.";
+            }
+
+            var translation = await _context.Languages
+                .Where(l => l.language_code == language)
+                .ToDictionaryAsync(l => l.message_key, l => l.message_content);
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: translation
+            );
+            return StatusCode(200, response);
         }
 
-        [AllowAnonymous]
-        [HttpGet("param")]
+        //public async Task<IActionResult> GetLanguage()
+        //{
+        //    var translation = await _context.Languages.ToListAsync();
+
+        //    var result = new
+        //    {
+        //        en = translation.ToDictionary(t => t.message_key!, t => t.message_en),
+        //        th = translation.ToDictionary(t => t.message_key!, t => t.message_th),
+        //    };
+        //    return StatusCode(200, result);
+        //}
+
+        //[AllowAnonymous]
+        [HttpGet("SystemParam")]
         public async Task<IActionResult> Masterdata(string reference)
         {
             List<SystemParam> lst = new List<SystemParam>();
@@ -39,7 +63,7 @@ namespace ScoreManagement.Controllers
             var isSuccess = false;
             try
             {
-                var data = await _context.SystemParams.Where(x => x.byte_reference.Equals(reference)
+                var data = await _context.SystemParams.Where(x => x.byte_reference!.Equals(reference)
                             ).ToListAsync();
                 if (data.Count > 0)
                 {

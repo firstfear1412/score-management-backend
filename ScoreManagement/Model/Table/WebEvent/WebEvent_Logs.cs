@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Table.WebEvent
+namespace ScoreManagement.Model.Table
 {
     public class WebEvent_Logs
     {

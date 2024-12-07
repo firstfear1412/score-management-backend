@@ -1,78 +1,67 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using ScoreManagement.Common;
+using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
-using ScoreManagement.Model.Table.User;
-using ScoreManagement.Model.User;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
+using ScoreManagement.Model.Table;
+using ScoreManagement.Query;
 using ScoreManagement.Services.Encrypt;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ScoreManagement.Controllers
 {
     [Authorize]
-    [Route("api")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class UserController : Controller
+    public class UserController : BaseController
     {
-        private readonly demoDB _context;
+        private readonly scoreDB _context;
         private readonly IEncryptService _encryptService;
         private readonly IConfiguration _configuration;
-        public UserController(demoDB context, IEncryptService encryptService, IConfiguration configuration)
+        private readonly IUserQuery _userQuery;
+        public UserController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IUserQuery userQuery)
         {
             _context = context;
             _encryptService = encryptService;
             _configuration = configuration;
+            _userQuery = userQuery;
         }
         [AllowAnonymous]
         [HttpPost("GetToken")]
         public async Task<IActionResult> GetTokenControllers([FromBody] UserResource resource)
         {
             var pathBase = HttpContext;
-            var message = string.Empty;
+            var messageDesc = string.Empty;
+            var messageKey = string.Empty;
             object? tokenResult = null;
             var isSuccess = false;
             var ErrorMessage = new ErrorMessage();
+            var response = new ApiResponse<object>();
             try
             {
 
                 if (!string.IsNullOrEmpty(resource.username) && !string.IsNullOrEmpty(resource.password))
                 {
                     bool flg = false;
-                    var users = await _context.Users.Where(a => a.username!.Equals(resource.username!)
-                                                                    && (a.active_status!.Equals("active"))
-                                                                    ).FirstOrDefaultAsync();
+                    var users = await _userQuery.GetUser(resource)!;
+
                     if (users != null)
                     {
-                        #region comment
-                        //if (users.role == 0)
-                        //{
-                        //    if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-                        //        resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-                        //    return StatusCode(200, resource.response);
-                        //}
-                        //if (users.total_failed >= 3 && users.date_login.Value.Date == DateTime.Now.Date)
-                        //{
-                        //    //ErrorMessage.Add("Your Account Has been Blocked !!");
-                        //    ErrorMessage.AddMessageFromStatusCode(409); //error : Your username is blocked. Please contact the staff. 
-                        //    if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-                        //        resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-                        //    return StatusCode(200, resource.response);
-                        //}
-                        #endregion comment
-                        flg = _encryptService.VerifyHashedPassword(users.password, resource.password);
+                        flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
                         if (flg)
                         {
                             var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
                             IConfigurationRoot configuration = builder.Build();
 
-                            string issuer = configuration["JWT:Issuer"];
-                            string privateKey = configuration["JWT:PrivateKey"];
-                            double MaxTokenHour = Convert.ToDouble(configuration["JWT:MaxTokenHour"]);
+                            string issuer = configuration["JWT:Issuer"]!;
+                            string privateKey = configuration["JWT:PrivateKey"]!;
+                            double MaxTokenHour = Convert.ToDouble(configuration["JWT:MaxTokenHour"]!);
 
                             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(privateKey));
                             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -98,75 +87,59 @@ namespace ScoreManagement.Controllers
                             tokenResult = new
                             {
                                 token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                                //expiration = jwtToken.ValidTo
-                                expiration = DateTime.Now.AddHours(MaxTokenHour)
+                                expiration = jwtToken.ValidTo
                             };
                             isSuccess = true;
                             //message = string.Format("Token will expire : {0}", tokenResult.expiration);
                         }
                         else
                         {
-                            #region comment
-                            //int i = users.total_failed.Value;
-                            //if (users.date_login.Value.Date != DateTime.Now.Date)
-                            //{
-                            //    users.total_failed = 1;
-                            //    users.date_login = DateTime.Now;
-                            //    resource.response.totalLoginFailOfDay = users.total_failed.Value;
-                            //    //ErrorMessage.Add("Username / password is incorrect.");
-                            //    ErrorMessage.AddMessageFromStatusCode(408); //error : Your username / password is incorrect. You can only enter it incorrectly 3 times.
-                            //}
-                            //else if (users.date_login.Value.Date == DateTime.Now.Date && users.total_failed < 3)
-                            //{
-                            //    users.total_failed = i + 1;
-                            //    users.date_login = DateTime.Now;
-                            //    resource.response.totalLoginFailOfDay = users.total_failed.Value;
-                            //    ErrorMessage.AddMessageFromStatusCode(408); //error : Your username / password is incorrect. You can only enter it incorrectly 3 times.
-                            //}
-                            //else
-                            //{
-                            //    //ErrorMessage.Add("Your Account Has been Blocked !!");
-                            //    ErrorMessage.AddMessageFromStatusCode(409); //error : Your username is blocked. Please contact the staff. 
-                            //}
-                            #endregion comment
                             users.total_failed = users.total_failed + 1;
                             users.update_date = DateTime.Now;
-                            message = "password incorrect";
+                            //message = "password incorrect";
+                            messageKey = "login_failed";
+                            messageDesc  = "username / password incorrect";
                         }
                     }
                     else
                     {
-                        message = "user not found";
+                        //message = "user not found";
+                        messageKey = "login_user_not_found";
+                        messageDesc = "user not found";
                     }
                 }
                 else
                 {
-                    message = "input required";
+                    //message = "input required";
+
+                    messageDesc = "field is required";
                 }
 
-                await _context.SaveChangesAsync();
+                //_context.SaveChanges();
             }
             catch (Exception ex)
             {
-                //ErrorMessage.Add("Exception : " + ex.Message);
-                ////ErrorMessage.Add("There is a problem with the information, please contact the developer !");
-                ErrorMessage.WriteLog(resource.username, ErrorMessage.ErrorText.Trim(), ex, pathBase);
-                message = ex.Message;
+                ErrorMessage.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
             }
 
-            //if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-            //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-            return StatusCode(200, new
+            if (!isSuccess)
             {
-                isSuccess = isSuccess,
-                message = message,
-                tokenResult = tokenResult
-            });
+                ErrorMessage.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+            response.IsSuccess = isSuccess;
+            response.Message = new ApiMessage
+            {
+                MessageKey = messageKey,
+                MessageDescription = messageDesc
+            };
+            response.TokenResult = tokenResult;
+            return StatusCode(200, response);
         }
 
         [AllowAnonymous]
-        [HttpPost("create/manual")]
-        public async Task<IActionResult> CreatUserManual([FromBody] User model)
+        [HttpPost("CreateManual")]
+        public IActionResult CreatUserManual([FromBody] User model)
         {
 
             bool isSuccess = false;
@@ -174,7 +147,7 @@ namespace ScoreManagement.Controllers
             string hashedPasswordBase64 = string.Empty;
             try
             {
-                hashedPasswordBase64 = _encryptService.EncryptPassword(model.password);
+                hashedPasswordBase64 = _encryptService.EncryptPassword(model.password!);
                 if (!string.IsNullOrEmpty(hashedPasswordBase64))
                 {
                     isSuccess = true;
@@ -190,13 +163,25 @@ namespace ScoreManagement.Controllers
                 isSuccess = false;
                 message = ex.Message.ToString();
             }
-            var response = new
-            {
-                isSuccess = isSuccess,
-                message = message,
-                hashedPassword = hashedPasswordBase64
-            };
-            return Ok(response);
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: new { hashedPassword = hashedPasswordBase64 }
+            );
+            //จะ response
+            /*
+             {
+                  "isSuccess": true,
+                  "message": {
+                    "messageKey": "",
+                    "messageDescription": "Password encoded successfully."
+                  },
+                  "objectResponse": {
+                    "hashedPassword": "AGf9vEWj4/yBNtpkeGtB7SFT+cL+aIr5UKMsNbAAF2gjE4v3B9VBxpVOYdVKMW7FSA=="
+                  }
+             } 
+            */
+            return StatusCode(200, response);
         }
     }
 }

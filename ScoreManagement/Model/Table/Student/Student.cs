@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Table.Student
+namespace ScoreManagement.Model.Table
 {
     public class Student
     {

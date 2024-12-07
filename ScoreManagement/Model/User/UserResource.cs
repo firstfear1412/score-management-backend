@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.User
+namespace ScoreManagement.Model
 {
     public class UserResource
     {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.SystemParam
+namespace ScoreManagement.Model
 {
     public class SystemParamResource
     {
