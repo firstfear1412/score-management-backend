@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
+using Org.BouncyCastle.Asn1.Cmp;
 using ScoreManagement.Common;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
@@ -36,13 +37,12 @@ namespace ScoreManagement.Controllers
         [HttpPost("GetToken")]
         public async Task<IActionResult> GetTokenControllers([FromBody] UserResource resource)
         {
-            var pathBase = HttpContext;
-            var messageDesc = string.Empty;
-            var messageKey = string.Empty;
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
             object? tokenResult = null;
-            var isSuccess = false;
-            var ErrorMessage = new ErrorMessage();
-            var response = new ApiResponse<object>();
+            bool isSuccess = false;
+            string sql = string.Empty;
             try
             {
 
@@ -56,12 +56,9 @@ namespace ScoreManagement.Controllers
                         flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
                         if (flg)
                         {
-                            var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
-                            IConfigurationRoot configuration = builder.Build();
-
-                            string issuer = configuration["JWT:Issuer"]!;
-                            string privateKey = configuration["JWT:PrivateKey"]!;
-                            double MaxTokenHour = Convert.ToDouble(configuration["JWT:MaxTokenHour"]!);
+                            string issuer = _configuration["JWT:Issuer"]!;
+                            string privateKey = _configuration["JWT:PrivateKey"]!;
+                            double MaxTokenHour = Convert.ToDouble(_configuration["JWT:MaxTokenHour"]!);
 
                             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(privateKey));
                             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -84,6 +81,7 @@ namespace ScoreManagement.Controllers
                             users.date_login = DateTime.Now;
                             users.update_date = DateTime.Now;
                             users.total_failed = 0;
+                            sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed ";
                             tokenResult = new
                             {
                                 token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
@@ -96,10 +94,13 @@ namespace ScoreManagement.Controllers
                         {
                             users.total_failed = users.total_failed + 1;
                             users.update_date = DateTime.Now;
+                            sql = @" [total_failed] = @total_failed, [update_date] = @update_date ";
                             //message = "password incorrect";
                             messageKey = "login_failed";
-                            messageDesc  = "username / password incorrect";
+                            messageDesc = "username / password incorrect";
                         }
+                        //update user login
+                        flg = await _userQuery.UpdateUser(users, sql);
                     }
                     else
                     {
@@ -107,6 +108,7 @@ namespace ScoreManagement.Controllers
                         messageKey = "login_user_not_found";
                         messageDesc = "user not found";
                     }
+
                 }
                 else
                 {
@@ -119,21 +121,21 @@ namespace ScoreManagement.Controllers
             }
             catch (Exception ex)
             {
-                ErrorMessage.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
                 messageDesc = ex.Message;
             }
 
             if (!isSuccess)
             {
-                ErrorMessage.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
             }
-            response.IsSuccess = isSuccess;
-            response.Message = new ApiMessage
-            {
-                MessageKey = messageKey,
-                MessageDescription = messageDesc
-            };
-            response.TokenResult = tokenResult;
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                tokenResult: tokenResult
+            );
             return StatusCode(200, response);
         }
 
@@ -141,9 +143,9 @@ namespace ScoreManagement.Controllers
         [HttpPost("CreateManual")]
         public IActionResult CreatUserManual([FromBody] User model)
         {
-
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
             bool isSuccess = false;
-            string message = string.Empty;
             string hashedPasswordBase64 = string.Empty;
             try
             {
@@ -151,21 +153,22 @@ namespace ScoreManagement.Controllers
                 if (!string.IsNullOrEmpty(hashedPasswordBase64))
                 {
                     isSuccess = true;
-                    message = "Password encoded successfully.";
+                    messageDesc = "Password encoded successfully.";
                 }
                 else
                 {
-                    message = "Password is empty or invalid.";
+                    messageDesc = "Password is empty or invalid.";
                 }
             }
             catch (Exception ex)
             {
                 isSuccess = false;
-                message = ex.Message.ToString();
+                messageDesc = ex.Message.ToString();
+                _webEvent.WriteLogException("CreateUserManual", messageDesc.Trim(), ex, pathBase);
             }
             var response = ApiResponse(
                 isSuccess: isSuccess,
-                messageDescription: message,
+                messageDescription: messageDesc,
                 objectResponse: new { hashedPassword = hashedPasswordBase64 }
             );
             //จะ response

@@ -5,19 +5,21 @@ using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
 using ScoreManagement.Services.Encrypt;
 using ScoreManagement.Common;
+using System.Text;
 
 namespace ScoreManagement.Query
 {
     public class UserQuery : IUserQuery
     {
         private readonly IConfiguration _configuration;
+        private readonly string _connectionString;
         public UserQuery(IConfiguration configuration)
         {
             _configuration = configuration;
+            _connectionString = configuration.GetConnectionString("scoreDb")!;
         }
         public async Task<User?> GetUser(UserResource resource)
         {
-            string connectionString = _configuration.GetConnectionString("scoreDb")!;
             // คำสั่ง SQL
             User? user = null;
             string query = @"
@@ -42,8 +44,8 @@ namespace ScoreManagement.Query
                         WHERE username = @username
                             AND active_status = 'active'
                     ";
-            
-            using (SqlConnection connection = new SqlConnection(connectionString))
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 // เปิดการเชื่อมต่อ
                 await connection.OpenAsync();
@@ -86,12 +88,93 @@ namespace ScoreManagement.Query
                             colNull = 0;
                             user = md;
                         }
-                        
+
                     }
                 }
                 await connection.CloseAsync();
             }
             return user;
+        }
+
+        public async Task<bool> UpdateUser(User resource, string query)
+        {
+            bool flg = false;
+            int i = 0;
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlTransaction tran = conn.BeginTransaction();
+                #region old code;
+                //sbSQL.Append("update MasterJobDetail ");
+                //sbSQL.Append("set  UpdateBy = @UpdateBy ,  ");
+                //sbSQL.Append("     UpdateDate = GETDATE() ,  ");
+                //sbSQL.AppendFormat("  {0}  ", query);
+                //sbSQL.Append("where sysJobLineNo = @sysJobLineNo  ");
+                //sbSQL.Append("and SysMasterJobNo = @sysMasterJobNo ");
+                //sbSQL.Append("and  UpdateToEPOD =  '1'  ");
+                //sbSQL.Append("and  JobLineStatus !=  'INACTIVE'  ");
+                #endregion old code;
+
+                #region field;
+                //[row_id]
+                //,[username]
+                //,[password]
+                //,[role]
+                //,[teacher_code]
+                //,[prefix]
+                //,[firstname]
+                //,[lastname]
+                //,[email]
+                //,[total_failed]
+                //,[date_login]
+                //,[active_status]
+                //,[create_date]
+                //,[create_by]
+                //,[update_date]
+                //,[update_by]
+                #endregion field;
+                string mainQuery = $@"
+                        UPDATE [User]
+                        SET
+                            {query}
+                        WHERE [username] = @username
+                    ";
+                using (SqlCommand cmd = new SqlCommand(mainQuery, conn))
+                {
+
+                    cmd.Transaction = tran;
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.Add(new SqlParameter("@username", resource.username ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@password", resource.password ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@role", resource.role ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@teacher_code", resource.teacher_code ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@prefix", resource.prefix ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@firstname", resource.firstname ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@lastname", resource.lastname ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@email", resource.email ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@total_failed", resource.total_failed ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@date_login", resource.date_login ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@active_status", resource.active_status ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@create_date", resource.create_date ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@create_by", resource.create_by ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@update_date", resource.update_date ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@update_by", resource.update_by ?? (object)DBNull.Value));
+
+                    i = await cmd.ExecuteNonQueryAsync();
+                    flg = i == 0 ? false : true;
+                    if (flg)
+                    {
+                        tran.Commit();
+                    }
+                    else
+                    {
+                        tran.Rollback();
+                    }
+                    // tran.Rollback();
+                }
+                conn.Close();
+            }
+            return flg;
         }
     }
 }

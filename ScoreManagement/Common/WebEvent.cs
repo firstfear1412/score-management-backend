@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ScoreManagement.Common
 {
-    public class ErrorMessage
+    public class WebEvent
     {
         //for failed
         public void WriteLogInfo(string user, string msg, HttpContext httpContext)

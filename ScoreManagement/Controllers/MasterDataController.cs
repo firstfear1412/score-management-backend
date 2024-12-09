@@ -42,18 +42,6 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
-        //public async Task<IActionResult> GetLanguage()
-        //{
-        //    var translation = await _context.Languages.ToListAsync();
-
-        //    var result = new
-        //    {
-        //        en = translation.ToDictionary(t => t.message_key!, t => t.message_en),
-        //        th = translation.ToDictionary(t => t.message_key!, t => t.message_th),
-        //    };
-        //    return StatusCode(200, result);
-        //}
-
         //[AllowAnonymous]
         [HttpGet("SystemParam")]
         public async Task<IActionResult> Masterdata(string reference)
@@ -91,12 +79,12 @@ namespace ScoreManagement.Controllers
 
             //if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
             //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-            return StatusCode(200, new
-            {
-                isSuccess = isSuccess,
-                message = message,
-                data = lst
-            });
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: lst
+            );
+            return StatusCode(200, response);
         }
 
     }
