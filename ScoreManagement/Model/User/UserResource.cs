@@ -10,7 +10,9 @@ namespace ScoreManagement.Model
 
         public string? password { get; set; }
 
-        public int? role { get; set; }
+        public int? roleCode { get; set; }
+
+        public string? role { get; set; }
 
         public string? teacher_code { get; set; }
 

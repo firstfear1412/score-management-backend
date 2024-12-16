@@ -96,6 +96,76 @@ namespace ScoreManagement.Query
             return user;
         }
 
+        public async Task<List<UserResource>> GetAllUsers()
+        {
+            var users = new List<UserResource>();
+            string query = @"
+                            SELECT 
+                                u.row_id, 
+                                u.username, 
+                                spr.byte_desc_th AS role, 
+                                u.teacher_code, 
+                                spp.byte_desc_th AS prefix,
+                                u.firstname, 
+                                u.lastname, 
+                                u.email, 
+                                u.date_login, 
+                                u.active_status
+                            FROM 
+                                [User] u
+                            LEFT JOIN 
+                                SystemParam spr ON u.role = spr.byte_code AND spr.byte_reference = 'role' 
+                            LEFT JOIN 
+                                SystemParam spp ON u.prefix = spp.byte_code AND spp.byte_reference = 'prefix' ";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    {
+                        if (!reader.HasRows)
+                        {
+                            return new List<UserResource>(); // คืนค่ารายการว่างแทน null
+                        }
+
+                        while (reader.Read())
+                        {
+                            // แปลงข้อมูลจาก DataReader เป็น User
+                            UserResource md = new UserResource();
+                            int col = 0;
+                            int colNull = 0;
+                            md.row_id = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            md.username = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            //md.password = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.role = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.teacher_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.prefix = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            //md.total_failed = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            md.date_login = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            md.active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            //md.create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            //md.create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            //md.update_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            //md.update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            col = 0;
+                            colNull = 0;
+
+                            users.Add(md); // เพิ่ม User เข้าในรายการ
+                        }
+                    }
+                }
+                await connection.CloseAsync();
+            }
+            return users;
+        }
+
+
         public async Task<bool> UpdateUser(User resource, string query)
         {
             bool flg = false;

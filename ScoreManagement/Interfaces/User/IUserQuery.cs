@@ -7,5 +7,7 @@ namespace ScoreManagement.Interfaces
     {
         Task<User?> GetUser(UserResource resource);
         Task<bool> UpdateUser(User resource, string query);
+
+        Task<List<UserResource>> GetAllUsers();
     }
 }
