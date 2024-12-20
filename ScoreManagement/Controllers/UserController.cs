@@ -97,7 +97,7 @@ namespace ScoreManagement.Controllers
                             sql = @" [total_failed] = @total_failed, [update_date] = @update_date ";
                             //message = "password incorrect";
                             messageKey = "login_failed";
-                            messageDesc = "username / password incorrect";
+                            messageDesc = "Invalid password. Please try again or contact admin.";
                         }
                         //update user login
                         flg = await _userQuery.UpdateUser(users, sql);
@@ -106,7 +106,7 @@ namespace ScoreManagement.Controllers
                     {
                         //message = "user not found";
                         messageKey = "login_user_not_found";
-                        messageDesc = "user not found";
+                        messageDesc = "User not found. Please try again or contact admin.";
                     }
 
                 }
