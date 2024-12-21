@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
+using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
 using ScoreManagement.Services.Encrypt;
@@ -15,9 +16,11 @@ namespace ScoreManagement.Controllers
     public class MasterDataController : BaseController
     {
         private readonly scoreDB _context;
-        public MasterDataController(scoreDB context)
+        private readonly IMasterDataQuery _masterDataQuery;
+        public MasterDataController(scoreDB context,IMasterDataQuery masterDataQuery)
         {
             _context = context;
+            _masterDataQuery = masterDataQuery;
         }
         [AllowAnonymous]
         [HttpGet("Language")]
@@ -30,10 +33,11 @@ namespace ScoreManagement.Controllers
                 message = "Language parameter is required.";
             }
 
-            var translation = await _context.Languages
-                .Where(l => l.language_code == language)
-                .ToDictionaryAsync(l => l.message_key, l => l.message_content);
-
+            var translation = await _masterDataQuery.GetLanguage(language);
+            if(translation.Count > 0)
+            {
+                isSuccess = true;
+            }
             var response = ApiResponse(
                 isSuccess: isSuccess,
                 messageDescription: message,
@@ -51,8 +55,7 @@ namespace ScoreManagement.Controllers
             var isSuccess = false;
             try
             {
-                var data = await _context.SystemParams.Where(x => x.byte_reference!.Equals(reference)
-                            ).ToListAsync();
+                var data = await _masterDataQuery.GetSystemParams(reference);
                 if (data.Count > 0)
                 {
                     
@@ -86,6 +89,44 @@ namespace ScoreManagement.Controllers
             );
             return StatusCode(200, response);
         }
+
+        [AllowAnonymous]
+        [HttpGet("EmailPlaceholder")]
+        public async Task<IActionResult> GetEmailPlaceholder()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            var placeholders = await _masterDataQuery.GetEmailPlaceholder();
+            if (placeholders.Count > 0)
+            {
+                isSuccess = true;
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: placeholders
+            );
+            return StatusCode(200, response);
+        }
+
+        //[AllowAnonymous]
+        //[HttpGet("EmailTemplate")]
+        //public async Task<IActionResult> GetEmailTemplate()
+        //{
+        //    bool isSuccess = false;
+        //    string message = string.Empty;
+        //    var placeholders = await _context.EmailPlaceholders.Where(x => x.active_status == "active").ToListAsync();
+        //    if (placeholders.Count > 0)
+        //    {
+        //        isSuccess = true;
+        //    }
+        //    var response = ApiResponse(
+        //        isSuccess: isSuccess,
+        //        messageDescription: message,
+        //        objectResponse: placeholders
+        //    );
+        //    return StatusCode(200, response);
+        //}
 
     }
 }

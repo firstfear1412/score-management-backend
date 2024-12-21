@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Query;
+using ScoreManagement.Services.Mail;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -120,6 +121,9 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddTransient<IEncryptService, EncryptService>();
 builder.Services.AddTransient<IUserQuery, UserQuery>();
+builder.Services.AddTransient<IMailService, MailService>();
+builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
+builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
