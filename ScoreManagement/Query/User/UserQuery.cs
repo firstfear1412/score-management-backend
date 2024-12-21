@@ -234,6 +234,104 @@ namespace ScoreManagement.Query
             }
         }
 
+        public async Task<bool> UpdateUserById(UserResource resource, string query)
+        {
+
+            const string queryPrefix = @"SELECT byte_code FROM SystemParam
+                                        WHERE 1=1
+                                        AND byte_desc_en = @Prefix
+                                        OR byte_desc_th = @Prefix
+                                        ";
+
+            const string queryRole = @"SELECT byte_code FROM SystemParam
+                                       WHERE 1=1
+                                       AND byte_desc_en = @Role
+                                       OR byte_desc_th = @Role";
+
+            bool isSuccess = false;
+
+            bool flg = false;
+            int i = 0;
+
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+                SqlTransaction tran = conn.BeginTransaction();
+
+                try
+                {
+                    // ดึงค่าจาก queryPrefix
+                    string prefixCode = null;
+                    if (!string.IsNullOrWhiteSpace(resource.prefix))
+                    {
+                        using (SqlCommand cmd = new SqlCommand(queryPrefix, conn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Prefix", resource.prefix);
+                            prefixCode = (string)await cmd.ExecuteScalarAsync();
+                        }
+                    }
+
+                    // ดึงค่าจาก queryRole
+                    string roleCode = null;
+                    if (!string.IsNullOrWhiteSpace(resource.role))
+                    {
+                        using (SqlCommand cmd = new SqlCommand(queryRole, conn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Role", resource.role);
+                            roleCode = (string)await cmd.ExecuteScalarAsync();
+                        }
+                    }
+
+
+                    string UpdateQuery = $@"
+                                           UPDATE [User]
+                                           SET {query}
+                                           WHERE 1=1
+                                           AND [row_id] = @row_id
+                                           AND [email] = @email
+                                           ";
+
+                    using (SqlCommand cmd =  new SqlCommand(UpdateQuery, conn))
+                    {
+                        cmd.Transaction = tran;
+                        cmd.Parameters.AddWithValue("row_id", resource.row_id);
+                        cmd.Parameters.AddWithValue("@password", resource.password ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@role", roleCode ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@teacher_code", resource.teacher_code ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@prefix", prefixCode ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@firstname", resource.firstname ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@lastname", resource.lastname ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@email", resource.email ?? (object)DBNull.Value);
+                        //cmd.Parameters.AddWithValue("@username", resource.username ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@active_status", resource.active_status ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@update_date", resource.update_date ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@update_by", resource.update_by ?? (object)DBNull.Value);
+
+                        i = await cmd.ExecuteNonQueryAsync();
+                        flg = i > 0;
+
+                        if (flg)
+                        {
+                            tran.Commit();
+                        }
+                        else
+                        {
+                            tran.Rollback();
+                        }
+                    }
+                }
+                catch
+                {
+                    tran.Rollback();
+                    throw;
+                }
+                finally
+                {
+                    await conn.CloseAsync();
+                }
+            }
+            return flg;
+        }
 
         public async Task<bool> UpdateUser(User resource, string query)
         {

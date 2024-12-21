@@ -11,5 +11,7 @@ namespace ScoreManagement.Interfaces
         Task<List<UserResource>> GetAllUsers();
 
         Task<bool> InsertUser(UserResource resource);
+
+        Task<bool> UpdateUserById(UserResource resource, string query);
     }
 }
