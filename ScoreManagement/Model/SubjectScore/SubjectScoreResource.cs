@@ -12,6 +12,8 @@
 
         public string? student_id { get; set; }
 
+        public int? seat_no { get; set; }
+
         public int? accumulated_score { get; set; }
 
         public int? midterm_score { get; set; }
