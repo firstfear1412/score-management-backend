@@ -9,5 +9,7 @@ namespace ScoreManagement.Interfaces
         Task<bool> UpdateUser(User resource, string query);
 
         Task<List<UserResource>> GetAllUsers();
+
+        Task<bool> InsertUser(UserResource resource);
     }
 }

@@ -6,6 +6,8 @@ using ScoreManagement.Model.Table;
 using ScoreManagement.Services.Encrypt;
 using ScoreManagement.Common;
 using System.Text;
+using Microsoft.AspNetCore.Http.Metadata;
+using Org.BouncyCastle.Asn1.Cmp;
 
 namespace ScoreManagement.Query
 {
@@ -163,6 +165,73 @@ namespace ScoreManagement.Query
                 await connection.CloseAsync();
             }
             return users;
+        }
+
+        public async Task<bool> InsertUser(UserResource resource)
+        {
+            const string queryPrefix = @"SELECT byte_code FROM SystemParam
+                                        WHERE 1=1
+                                        AND byte_desc_en = @Prefix
+                                        OR byte_desc_th = @Prefix
+                                        ";
+
+            const string queryRole = @"SELECT byte_code FROM SystemParam
+                                       WHERE 1=1
+                                       AND byte_desc_en = @Role
+                                       OR byte_desc_th = @Role";
+
+            const string query = @"
+                INSERT INTO [User] 
+                (username, email, password, role, teacher_code, prefix, firstname, lastname, active_status, create_date, create_by) 
+                VALUES (@Username, @Email, @password, @Role, @TeacherCode, @Prefix, @Firstname, @Lastname, @ActiveStatus, @CreateDate, @CreateBy)";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                string prefixValue = null;
+                string roleValue = null;
+
+                using (SqlCommand commandSelectPrefix = new SqlCommand(queryPrefix, connection)) 
+                {
+                    commandSelectPrefix.Parameters.AddWithValue("@Prefix", resource.prefix);
+                    var result = await commandSelectPrefix.ExecuteScalarAsync();
+                    if(result != null)
+                    {
+                        prefixValue = result.ToString();
+                    }
+                }
+
+                using (SqlCommand commandSelectRole = new SqlCommand(queryRole, connection))
+                {
+                    commandSelectRole.Parameters.AddWithValue("@Role", resource.role);
+                    var result = await commandSelectRole.ExecuteScalarAsync();
+                    if (result != null)
+                    {
+                        roleValue = result.ToString();
+                    }
+                }
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    string username = resource.email?.Split('@')[0] ?? string.Empty;
+
+                    command.Parameters.AddWithValue("@Username", username);
+                    command.Parameters.AddWithValue("@Email", resource.email);
+                    command.Parameters.AddWithValue("@Password", resource.password);
+                    command.Parameters.AddWithValue("@Role", roleValue);
+                    command.Parameters.AddWithValue("@TeacherCode", resource.teacher_code);
+                    command.Parameters.AddWithValue("@Prefix", prefixValue);
+                    command.Parameters.AddWithValue("@Firstname", resource.firstname);
+                    command.Parameters.AddWithValue("@Lastname", resource.lastname);
+                    command.Parameters.AddWithValue("@ActiveStatus", resource.active_status);
+                    command.Parameters.AddWithValue("@CreateDate", resource.create_date);
+                    command.Parameters.AddWithValue("@CreateBy", resource.create_by);
+
+                    int affectedRows = await command.ExecuteNonQueryAsync();
+                    return affectedRows > 0;
+                }
+            }
         }
 
 
