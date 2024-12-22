@@ -145,8 +145,8 @@ namespace ScoreManagement.Query
                                     prefix_description_en = reader.IsDBNull(4) ? null : reader.GetString(4),
                                     firstname = reader.IsDBNull(5) ? null : reader.GetString(5),
                                     lastname = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                    role_description_th = reader.IsDBNull(7) ? null : reader.GetString(7),
-                                    active_status = reader.IsDBNull(8) ? null : reader.GetString(8),
+                                    active_status = reader.IsDBNull(7) ? null : reader.GetString(7),
+                                    role_description_th = reader.IsDBNull(8) ? null : reader.GetString(8),
                                     role_description_en = reader.IsDBNull(9) ? null : reader.GetString(9)
 
                                 };

@@ -36,7 +36,7 @@ namespace ScoreManagement.Controllers
         [AllowAnonymous]
         [HttpPost("GetToken")]
         public async Task<IActionResult> GetTokenControllers([FromBody] UserResource resource)
-         {
+        {
             HttpContext pathBase = HttpContext;
             string messageDesc = string.Empty;
             string messageKey = string.Empty;
@@ -66,7 +66,7 @@ namespace ScoreManagement.Controllers
                             var claims = new[]
                             {
                                  new Claim("username", resource.username),
-                                 new Claim("role", users.role.ToString()),
+                                 new Claim("role", users.role.ToString()!),
                                  //new Claim("password", resource.password),
                                  //new Claim("tokenType", "login"),
                             };
@@ -139,6 +139,66 @@ namespace ScoreManagement.Controllers
             );
             return StatusCode(200, response);
         }
+
+        [AllowAnonymous]
+        [HttpPost("GetUserInfo")]
+        public async Task<IActionResult> GetUserInfoControllers([FromBody] UserResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? userInfo = null;  // Store user information here
+            bool isSuccess = false;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(resource.username))
+                {
+                    // Fetch user information from GetUserInfo
+                    var user = await _userQuery.GetUserInfo(resource); // Call GetUserInfo method to retrieve user data
+
+                    if (user != null)
+                    {
+                        userInfo = user;  // Store the user info object here
+                        isSuccess = true;
+                        messageKey = "login_success";
+                        messageDesc = "User data retrieved successfully.";
+                    }
+                    else
+                    {
+                        messageKey = "user_not_found";
+                        messageDesc = "User not found.";
+                    }
+                }
+                else
+                {
+                    messageDesc = "Username is required";
+                }
+            }
+            catch (Exception ex)
+            {
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
+
+            if (!isSuccess)
+            {
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+
+            // Respond with the user info or error message
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                objectResponse: userInfo
+            );
+
+            return StatusCode(200, response);
+        }
+
+
+
 
         [AllowAnonymous]
         [HttpPost("CreateManual")]

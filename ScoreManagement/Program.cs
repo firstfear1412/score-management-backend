@@ -58,10 +58,10 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.AllowTrailingCommas = true;
     })
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-    })
+    //.AddJsonOptions(options =>
+    //{
+    //    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    //})
     ;
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
