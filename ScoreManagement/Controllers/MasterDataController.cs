@@ -7,6 +7,8 @@ using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
 using ScoreManagement.Services.Encrypt;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ScoreManagement.Controllers
 {
@@ -28,15 +30,22 @@ namespace ScoreManagement.Controllers
         {
             bool isSuccess = false;
             string message = string.Empty;
-            if (string.IsNullOrEmpty(language))
+            Dictionary<string, string> translation = new Dictionary<string, string>();
+            try
             {
-                message = "Language parameter is required.";
+                translation = await _masterDataQuery.GetLanguage(language);
+                if(translation.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
             }
-
-            var translation = await _masterDataQuery.GetLanguage(language);
-            if(translation.Count > 0)
+            catch (Exception ex)
             {
-                isSuccess = true;
+                message = ex.Message;
             }
             var response = ApiResponse(
                 isSuccess: isSuccess,
@@ -55,7 +64,7 @@ namespace ScoreManagement.Controllers
             var isSuccess = false;
             try
             {
-                var data = await _masterDataQuery.GetSystemParams(reference);
+                List<SystemParam> data = await _masterDataQuery.GetSystemParams(reference);
                 if (data.Count > 0)
                 {
                     
@@ -90,17 +99,30 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
-        [AllowAnonymous]
+        //[AllowAnonymous]
         [HttpGet("EmailPlaceholder")]
         public async Task<IActionResult> GetEmailPlaceholder()
         {
             bool isSuccess = false;
             string message = string.Empty;
-            var placeholders = await _masterDataQuery.GetEmailPlaceholder();
-            if (placeholders.Count > 0)
+            List<EmailPlaceholder> placeholders = new List<EmailPlaceholder>();
+            try
             {
-                isSuccess = true;
+                placeholders = await _masterDataQuery.GetEmailPlaceholder();
+                if (placeholders.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
             }
+            catch(Exception ex)
+            {
+                message = ex.Message;
+            }
+            
             var response = ApiResponse(
                 isSuccess: isSuccess,
                 messageDescription: message,
@@ -109,24 +131,60 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
-        //[AllowAnonymous]
-        //[HttpGet("EmailTemplate")]
-        //public async Task<IActionResult> GetEmailTemplate()
-        //{
-        //    bool isSuccess = false;
-        //    string message = string.Empty;
-        //    var placeholders = await _context.EmailPlaceholders.Where(x => x.active_status == "active").ToListAsync();
-        //    if (placeholders.Count > 0)
-        //    {
-        //        isSuccess = true;
-        //    }
-        //    var response = ApiResponse(
-        //        isSuccess: isSuccess,
-        //        messageDescription: message,
-        //        objectResponse: placeholders
-        //    );
-        //    return StatusCode(200, response);
-        //}
+        [AllowAnonymous]
+        [HttpGet("EmailTemplate")]
+        public async Task<IActionResult> GetEmailTemplate(string username)
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            EmailTemplateGroup groupedTemplates = new EmailTemplateGroup();
+            try
+            {
+                List<EmailTemplate> templates = await _masterDataQuery.GetEmailTemplate(username);
+                if (templates.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+                groupedTemplates = new EmailTemplateGroup
+                {
+                    PrivateTemplates = templates
+                        .Where(x => x.is_private)
+                        .Select(x => new TemplateCollection
+                        {
+                            TemplateName = x.template_name,
+                            Detail = new TemplateDetail
+                            {
+                                Subject = x.subject,
+                                Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
+                            }
+                        }).ToList(),
+                    DefaultTemplates = templates
+                        .Where(x => !x.is_private)
+                        .Select(x => new TemplateCollection
+                        {
+                            TemplateName = x.template_name,
+                            Detail = new TemplateDetail
+                            {
+                                Subject = x.subject,
+                                Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
+                            }
+                        }).ToList()
+                };
+            }
+            catch (Exception ex) {
+                message = ex.Message; 
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: groupedTemplates
+            );
+            return StatusCode(200, response);
+        }
 
     }
 }

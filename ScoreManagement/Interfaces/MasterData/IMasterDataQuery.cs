@@ -7,5 +7,6 @@ namespace ScoreManagement.Interfaces
         Task<List<SystemParam>> GetSystemParams(string reference);
         Task<Dictionary<string, string>> GetLanguage(string language);
         Task<List<EmailPlaceholder>> GetEmailPlaceholder();
+        Task<List<EmailTemplate>> GetEmailTemplate(string username);
     }
 }

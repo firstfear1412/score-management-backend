@@ -2,6 +2,7 @@
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model.Table;
+using System.Linq;
 
 namespace ScoreManagement.Query
 {
@@ -32,6 +33,22 @@ namespace ScoreManagement.Query
         public Task<List<EmailPlaceholder>> GetEmailPlaceholder()
         {
            return _context.EmailPlaceholders.Where(x => x.active_status == "active").ToListAsync();
+        }
+
+        public Task<List<EmailTemplate>> GetEmailTemplate(string username)
+        {
+            var defaultTemplates =  _context.EmailTemplates.Where(x => x.is_private == false && x.active_status == "active");
+
+            var privateTemplates = _context.EmailTemplates.Join(
+                    _context.UserEmailTemplates,
+                    et => et.template_id,
+                    ut => ut.template_id,
+                    (et, ut) => new { et, ut }
+                )
+                .Where(x => x.ut.username == username && x.et.is_private == true && x.et.active_status == "active").Select(x => x.et);
+            var combinedTemplates = defaultTemplates.Union(privateTemplates).ToListAsync();
+
+            return combinedTemplates;
         }
     }
 }

@@ -64,7 +64,7 @@ namespace ScoreManagement.Controllers
                 // 2. แทนที่ Placeholder ใน contentEmail
                 string contentEmail = await ReplacePlaceholders(resource.EmailDetail.ContentEmail, resource.SubjectDetail, resource.username);
 
-                string contentHTML = $@"<pre style='tab-size: 6;font-size: 13px; white-space: pre;'>{contentEmail}</pre>";
+                string contentHTML = $@"<pre style='tab-size: 8;font-size: 13px; white-space: pre;'>{contentEmail}</pre>";
 
                 _mailService.SendMail(subjectEmail, contentHTML, "pamornpon.t@live.ku.th", true);
 
