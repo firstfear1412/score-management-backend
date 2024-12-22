@@ -9,6 +9,7 @@ using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
+using ScoreManagement.Model.SubjectScore;
 using ScoreManagement.Model.Table;
 using ScoreManagement.Query;
 using ScoreManagement.Services.Encrypt;
@@ -45,7 +46,7 @@ namespace ScoreManagement.Controllers
             return View(resource);
         }
 
-        [AllowAnonymous]
+        //[AllowAnonymous]
         [HttpPost("SendStudentScore")]
         public async Task<IActionResult> SendStudentScore([FromBody] SendStudentScoreResource resource)
         {
@@ -79,6 +80,15 @@ namespace ScoreManagement.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
+
+        //[AllowAnonymous]
+        [HttpPost("UpdateTemplate")]
+        public async Task<IActionResult> UpdateTemplateEmail([FromBody] EmailTemplateResource resource)
+        {
+            bool result = await _studentScoreQuery.UpdateTemplateEmail(resource);
+            return Ok(result);
+        }
+
         #endregion controller
 
 

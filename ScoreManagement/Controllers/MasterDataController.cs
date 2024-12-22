@@ -155,6 +155,7 @@ namespace ScoreManagement.Controllers
                         .Where(x => x.is_private)
                         .Select(x => new TemplateCollection
                         {
+                            TemplateId = x.template_id,
                             TemplateName = x.template_name,
                             Detail = new TemplateDetail
                             {
@@ -166,6 +167,7 @@ namespace ScoreManagement.Controllers
                         .Where(x => !x.is_private)
                         .Select(x => new TemplateCollection
                         {
+                            TemplateId = x.template_id,
                             TemplateName = x.template_name,
                             Detail = new TemplateDetail
                             {

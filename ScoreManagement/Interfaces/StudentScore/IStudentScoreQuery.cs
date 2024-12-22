@@ -1,4 +1,6 @@
-﻿using ScoreManagement.Model;
+﻿using Microsoft.AspNetCore.Mvc;
+using ScoreManagement.Model;
+using ScoreManagement.Model.SubjectScore;
 using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Interfaces
@@ -7,5 +9,6 @@ namespace ScoreManagement.Interfaces
     {
         PlaceholderMapping GetPlaceholderMapping(string placeholderKey);
         Task<string> GetFieldValue(SubjectDetail subjectDetail, string sourceTable, string fieldName, string condition, string username);
+        Task<bool> UpdateTemplateEmail(EmailTemplateResource resource);
     }
 }

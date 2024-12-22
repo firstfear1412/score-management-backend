@@ -13,6 +13,7 @@
 
     public class TemplateCollection
     {
+        public int TemplateId { get; set; }
         public string TemplateName { get; set; }
         public TemplateDetail Detail { get; set; }
     }
