@@ -98,6 +98,66 @@ namespace ScoreManagement.Query
             return user;
         }
 
+        public async Task<User?> GetUserInfo(UserResource resource)
+        {
+            User? user = null;
+            string query = @"
+                    SELECT
+                             u.[username],
+                             u.[email],
+                             u.[teacher_code],
+                             spp.[byte_desc_th] AS prefix_description_th,
+                             spp.[byte_desc_en] AS prefix_description_en,
+                             u.[firstname],
+                             u.[lastname],
+                             u.[active_status],
+                             spr.[byte_desc_th] as role_description_th,
+                             spr.[byte_desc_en] as role_description_en
+                       FROM [ScoreManagement].[dbo].[User] u
+                       LEFT JOIN [ScoreManagement].[dbo].[SystemParam] spr 
+                              ON u.role = spr.byte_code AND spr.byte_reference = 'role'
+                       LEFT JOIN [ScoreManagement].[dbo].[SystemParam] spp 
+                              ON u.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
+                       WHERE u.username = @username
+                         AND u.active_status = 'active';
+               ";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@username", resource.username);
+
+                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    {
+                        if (reader.HasRows)
+                        {
+                            if (reader.Read())
+                            {
+                                user = new User
+                                {
+                                    username = reader.IsDBNull(0) ? null : reader.GetString(0),
+                                    email = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                    teacher_code = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                    prefix_description_th = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                    prefix_description_en = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                    firstname = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                    lastname = reader.IsDBNull(6) ? null : reader.GetString(6),
+                                    role_description_th = reader.IsDBNull(7) ? null : reader.GetString(7),
+                                    active_status = reader.IsDBNull(8) ? null : reader.GetString(8),
+                                    role_description_en = reader.IsDBNull(9) ? null : reader.GetString(9)
+
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            return user;
+        }
+
         public async Task<List<UserResource>> GetAllUsers()
         {
             var users = new List<UserResource>();

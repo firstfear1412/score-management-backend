@@ -6,6 +6,7 @@ namespace ScoreManagement.Interfaces
     public interface IUserQuery
     {
         Task<User?> GetUser(UserResource resource);
+        Task<User?> GetUserInfo(UserResource resource);
         Task<bool> UpdateUser(User resource, string query);
 
         Task<List<UserResource>> GetAllUsers();
