@@ -33,5 +33,9 @@ namespace ScoreManagement.Model.Table
 
         public string? update_by { get; set; }
 
+        public string? prefix_description_th { get; set; }
+        public string? prefix_description_en { get; set; }
+        public string? role_description_th { get; set; }
+        public string? role_description_en { get; set; }
     }
 }

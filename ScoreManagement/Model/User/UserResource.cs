@@ -33,6 +33,10 @@ namespace ScoreManagement.Model
         public DateTime? update_date { get; set; }
 
         public string? update_by { get; set; }
+        public string? prefix_description_th { get; set; }
+        public string? prefix_description_en { get; set; }
+        public string? role_description_th { get; set; }
+        public string? role_description_en { get; set; }
 
     }
 }
