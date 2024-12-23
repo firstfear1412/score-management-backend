@@ -67,7 +67,7 @@ namespace ScoreManagement.Controllers
                 foreach (var resource in resources)
                 {
                     //user.password = _encryptService.EncryptPassword(user.password!);
-                    resource.password = _encryptService.EncryptPassword("1234");
+                    resource.password = _encryptService.EncryptPassword(resource.teacher_code);
 
                     resource.create_date = DateTime.Now;
                     //resource.create_by = User.Identity?.Name ?? "Rawee";
