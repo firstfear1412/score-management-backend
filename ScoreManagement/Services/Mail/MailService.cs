@@ -21,12 +21,13 @@ namespace ScoreManagement.Services.Mail
             _mail_timeout = _configuration["MAIL:TIMEOUT"]!.ToString();
         }
 
-        public void SendMail(string topic, string body, string mailTo)
+        public bool SendMail(string topic, string body, string mailTo)
         {
-            SendMail(topic, body, mailTo, false);
+            return SendMail(topic, body, mailTo, false);
         }
-        public void SendMail(string topic, string body, string mailTo, bool isBodyHTML)
+        public bool SendMail(string topic, string body, string mailTo, bool isBodyHTML)
         {
+            bool isSuccess = false;
             WebEvent _webEvent = new WebEvent();
             MailMessage Mail = new MailMessage();
             SmtpClient SmtpServer = new SmtpClient(_mail_host);
@@ -50,12 +51,14 @@ namespace ScoreManagement.Services.Mail
             try
             {
                 SmtpServer.Send(Mail);
+                isSuccess = true;
             }
             catch (Exception ex)
             {
                 // Log or handle exception
                 throw new Exception($"Error sending email: {ex.Message}", ex);
             }
+            return isSuccess;
         }
     }
 }

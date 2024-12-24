@@ -50,6 +50,8 @@ namespace ScoreManagement.Controllers
         [HttpPost("SendStudentScore")]
         public async Task<IActionResult> SendStudentScore([FromBody] SendStudentScoreResource resource)
         {
+            bool isSuccess = false;
+            string message = string.Empty;
             try
             {
                 if(resource == null || resource.SubjectDetail == null || resource.EmailDetail == null) {
@@ -67,26 +69,99 @@ namespace ScoreManagement.Controllers
 
                 string contentHTML = $@"<pre style='tab-size: 8;font-size: 13px; white-space: pre;'>{contentEmail}</pre>";
 
-                _mailService.SendMail(subjectEmail, contentHTML, "pamornpon.t@live.ku.th", true);
-
-                return Ok(new
+                bool isSent = _mailService.SendMail(subjectEmail, contentHTML, "pamornpon.t@live.ku.th", true);
+                if (isSent)
                 {
-                    SubjectEmail = subjectEmail,
-                    ContentEmail = contentEmail
-                });
+                    isSuccess = true;
+                }
+                
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                message = ex.Message;
             }
+            var response = ApiResponse<string>(
+                isSuccess: isSuccess,
+                messageDescription: message
+            );
+            return StatusCode(200, response);
         }
 
         //[AllowAnonymous]
         [HttpPost("UpdateTemplate")]
         public async Task<IActionResult> UpdateTemplateEmail([FromBody] EmailTemplateResource resource)
         {
-            bool result = await _studentScoreQuery.UpdateTemplateEmail(resource);
-            return Ok(result);
+            bool isSuccess = false;
+            string message = string.Empty;
+            try
+            {
+                bool result = result = await _studentScoreQuery.UpdateTemplateEmail(resource);
+                if (result)
+                {
+                    isSuccess = true;
+                    message = "Update template success.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+            var response = ApiResponse<string>(
+                isSuccess: isSuccess,
+                messageDescription: message
+            );
+            return StatusCode(200, response);
+        }
+
+        [HttpPost("CreateTemplate")]
+        public async Task<IActionResult> CreateTemplateEmail([FromBody] EmailTemplateResource resource)
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            try
+            {
+                bool result = await _studentScoreQuery.CreateTemplateEmail(resource);
+                if (result)
+                {
+                    isSuccess = true;
+                    message = "Insert template success.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+            var response = ApiResponse<string>(
+                isSuccess: isSuccess,
+                messageDescription: message
+            );
+
+            return StatusCode(200, response);
+        }
+        [HttpPost("DeleteTemplate")]
+        public async Task<IActionResult> DeleteTemplateEmail([FromBody] EmailTemplateResource resource)
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            try
+            {
+                bool result = await _studentScoreQuery.DeleteTemplateEmail(resource);
+                if (result)
+                {
+                    isSuccess = true;
+                    message = "Delete template success.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+            var response = ApiResponse<string>(
+                isSuccess: isSuccess,
+                messageDescription: message
+            );
+
+            return StatusCode(200, response);
         }
 
         #endregion controller

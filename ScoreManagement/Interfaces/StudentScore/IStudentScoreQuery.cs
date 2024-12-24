@@ -10,5 +10,7 @@ namespace ScoreManagement.Interfaces
         PlaceholderMapping GetPlaceholderMapping(string placeholderKey);
         Task<string> GetFieldValue(SubjectDetail subjectDetail, string sourceTable, string fieldName, string condition, string username);
         Task<bool> UpdateTemplateEmail(EmailTemplateResource resource);
+        Task<bool> CreateTemplateEmail(EmailTemplateResource resource);
+        Task<bool> DeleteTemplateEmail(EmailTemplateResource resource);
     }
 }
