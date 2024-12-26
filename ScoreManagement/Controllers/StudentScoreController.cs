@@ -163,6 +163,31 @@ namespace ScoreManagement.Controllers
 
             return StatusCode(200, response);
         }
+        [HttpPost("SetDefaultTemplate")]
+        public async Task<IActionResult> SetDefaultTemplateEmail([FromBody] EmailTemplateResource resource)
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            try
+            {
+                bool result = await _studentScoreQuery.SetDefaultTemplateEmail(resource);
+                if (result)
+                {
+                    isSuccess = true;
+                    message = "set Default template success.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+            var response = ApiResponse<string>(
+                isSuccess: isSuccess,
+                messageDescription: message
+            );
+
+            return StatusCode(200, response);
+        }
 
         #endregion controller
 

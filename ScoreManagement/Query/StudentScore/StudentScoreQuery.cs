@@ -270,6 +270,49 @@ namespace ScoreManagement.Query
 
             return flg;
         }
+        public async Task<bool> SetDefaultTemplateEmail(EmailTemplateResource resource)
+        {
+            bool flg = false;
+            int i = 0;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                try
+                {
+                    // สร้าง query SQL แบบ dynamic
+                    string query = $@"
+                        UPDATE UserEmailTemplate
+                        SET is_default = CASE
+                            WHEN template_id = @template_id THEN 1
+                            ELSE 0
+                        END
+                        WHERE [username] = @username AND [active_status] = 'active'
+                    ";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@template_id", resource.template_id);
+                        command.Parameters.AddWithValue("@username", resource.username);
+
+                        i = await command.ExecuteNonQueryAsync();
+                        flg = i == 0 ? false : true;
+                        if (!flg)
+                        {
+                            throw new Exception("Failed to update UserEmailTemplate");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+
+                await connection.CloseAsync();
+            }
+
+            return flg;
+        }
 
     }
 }

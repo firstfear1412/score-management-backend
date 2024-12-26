@@ -12,5 +12,6 @@ namespace ScoreManagement.Interfaces
         Task<bool> UpdateTemplateEmail(EmailTemplateResource resource);
         Task<bool> CreateTemplateEmail(EmailTemplateResource resource);
         Task<bool> DeleteTemplateEmail(EmailTemplateResource resource);
+        Task<bool> SetDefaultTemplateEmail(EmailTemplateResource resource);
     }
 }
