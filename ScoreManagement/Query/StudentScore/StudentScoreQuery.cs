@@ -127,8 +127,8 @@ namespace ScoreManagement.Query
                     // สร้าง query SQL แบบ dynamic
                     string query1 = $@"
                         INSERT INTO [dbo].[EmailTemplate]
-                           ([template_id]
-                           ,[template_name]
+                           (
+                           [template_name]
                            ,[is_private]
                            ,[subject]
                            ,[body]
@@ -138,8 +138,7 @@ namespace ScoreManagement.Query
                            ,[update_date]
                            ,[update_by])
                         VALUES(
-                            @templateId
-                            ,@templateName
+                            @templateName
                             ,@isPrivate
                             ,@subject
                             ,@body
@@ -148,7 +147,8 @@ namespace ScoreManagement.Query
                             ,@createBy
                             ,@updateDate
                             ,@updateBy
-                        )
+                        );
+                        SELECT SCOPE_IDENTITY();
                     ";
                     string query2 = $@"
                         INSERT INTO [dbo].[UserEmailTemplate]
@@ -169,11 +169,12 @@ namespace ScoreManagement.Query
                             ,@createBy
                             ,@updateDate
                             ,@updateBy
+                        );
                     ";
 
-                    using (var cmd1 = new SqlCommand(query1, connection))
+                    using (var cmd1 = new SqlCommand(query1, connection, tran))
                     {
-                        cmd1.Parameters.AddWithValue("@templateId", resource.template_id);
+                        //cmd1.Parameters.AddWithValue("@templateId", resource.template_id);
                         cmd1.Parameters.AddWithValue("@templateName", resource.template_name);
                         cmd1.Parameters.AddWithValue("@isPrivate", true);
                         cmd1.Parameters.AddWithValue("@subject", resource.subject);
@@ -184,31 +185,39 @@ namespace ScoreManagement.Query
                         cmd1.Parameters.AddWithValue("@updateDate", DateTime.Now);
                         cmd1.Parameters.AddWithValue("@updateBy", resource.username);
 
-                        i = await cmd1.ExecuteNonQueryAsync();
-                        flg = i == 0 ? false : true;
-                        if (!flg)
+                        //i = await cmd1.ExecuteNonQueryAsync();
+                        //flg = i == 0 ? false : true;
+                        //if (!flg)
+                        //{
+                        //    throw new Exception("Failed to insert into EmailTemplate");
+                        //}
+                        var result = await cmd1.ExecuteScalarAsync();
+                        int templateId = Convert.ToInt32(result);
+                        if(templateId == 0)
                         {
-                            throw new Exception("Failed to insert into EmailTemplate");
+                            throw new Exception("Failed to retrive the generated template_id or insert into EmailTemplate failed");
                         }
-                    }
-                    using (var cmd2 = new SqlCommand(query2, connection))
-                    {
-                        cmd2.Parameters.AddWithValue("@username", resource.username);
-                        cmd2.Parameters.AddWithValue("@templateId", resource.template_id);
-                        cmd2.Parameters.AddWithValue("@isDefault", false);
-                        cmd2.Parameters.AddWithValue("@activity_status", "active");
-                        cmd2.Parameters.AddWithValue("@createDate", DateTime.Now);
-                        cmd2.Parameters.AddWithValue("@createBy", resource.username);
-                        cmd2.Parameters.AddWithValue("@updateDate", DateTime.Now);
-                        cmd2.Parameters.AddWithValue("@updateBy", resource.username);
 
-                        i = await cmd2.ExecuteNonQueryAsync();
-                        flg = i == 0 ? false : true;
-                        if (!flg)
+                        using (var cmd2 = new SqlCommand(query2, connection, tran))
                         {
-                            throw new Exception("Failed to insert into UserEmailTemplate");
+                            cmd2.Parameters.AddWithValue("@username", resource.username);
+                            cmd2.Parameters.AddWithValue("@templateId", templateId);
+                            cmd2.Parameters.AddWithValue("@isDefault", false);
+                            cmd2.Parameters.AddWithValue("@activity_status", "active");
+                            cmd2.Parameters.AddWithValue("@createDate", DateTime.Now);
+                            cmd2.Parameters.AddWithValue("@createBy", resource.username);
+                            cmd2.Parameters.AddWithValue("@updateDate", DateTime.Now);
+                            cmd2.Parameters.AddWithValue("@updateBy", resource.username);
+
+                            i = await cmd2.ExecuteNonQueryAsync();
+                            flg = i == 0 ? false : true;
+                            if (!flg)
+                            {
+                                throw new Exception("Failed to insert into UserEmailTemplate");
+                            }
                         }
                     }
+                    
                     await tran.CommitAsync();
                     return true;
                 }
