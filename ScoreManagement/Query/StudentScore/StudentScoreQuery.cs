@@ -154,7 +154,6 @@ namespace ScoreManagement.Query
                         INSERT INTO [dbo].[UserEmailTemplate]
                                    ([username]
                                    ,[template_id]
-                                   ,[is_default]
                                    ,[active_status]
                                    ,[create_date]
                                    ,[create_by]
@@ -163,7 +162,6 @@ namespace ScoreManagement.Query
                         VALUES(
                             @username
                             ,@templateId
-                            ,@isDefault
                             ,@activity_status
                             ,@createDate
                             ,@createBy
@@ -202,7 +200,6 @@ namespace ScoreManagement.Query
                         {
                             cmd2.Parameters.AddWithValue("@username", resource.username);
                             cmd2.Parameters.AddWithValue("@templateId", templateId);
-                            cmd2.Parameters.AddWithValue("@isDefault", false);
                             cmd2.Parameters.AddWithValue("@activity_status", "active");
                             cmd2.Parameters.AddWithValue("@createDate", DateTime.Now);
                             cmd2.Parameters.AddWithValue("@createBy", resource.username);
@@ -274,32 +271,73 @@ namespace ScoreManagement.Query
         {
             bool flg = false;
             int i = 0;
-
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
                 try
                 {
-                    // สร้าง query SQL แบบ dynamic
-                    string query = $@"
-                        UPDATE UserEmailTemplate
-                        SET is_default = CASE
-                            WHEN template_id = @template_id THEN 1
-                            ELSE 0
-                        END
-                        WHERE [username] = @username AND [active_status] = 'active'
+                    string checkQuery = @"
+                        SELECT COUNT(*)
+                        FROM UserDefaultEmailTemplate
+                        WHERE [username] = @username AND [active_status] = 'active';
                     ";
 
-                    using (var command = new SqlCommand(query, connection))
+                    using (var checkCommand = new SqlCommand(checkQuery, connection))
                     {
-                        command.Parameters.AddWithValue("@template_id", resource.template_id);
-                        command.Parameters.AddWithValue("@username", resource.username);
+                        checkCommand.Parameters.AddWithValue("@username", resource.username);
+                        int count = (int)await checkCommand.ExecuteScalarAsync();
 
-                        i = await command.ExecuteNonQueryAsync();
-                        flg = i == 0 ? false : true;
-                        if (!flg)
+                        if (count == 0)
                         {
-                            throw new Exception("Failed to update UserEmailTemplate");
+                            string insertQuery = @"
+                                INSERT INTO UserDefaultEmailTemplate ( 
+                                    [username], 
+                                    [template_id],  
+                                    [active_status],  
+                                    [create_date],  
+                                    [create_by],  
+                                    [update_date],  
+                                    [update_by]  
+                                )  
+                                VALUES  
+                                (  
+                                    @username,  
+                                    @template_id,  
+                                    'active',  
+                                    GETDATE(),  
+                                    @username,  
+                                    GETDATE(),  
+                                    @username
+                                );
+                            ";
+
+                            using (var  insertCommand = new SqlCommand(insertQuery, connection))
+                            {
+                                insertCommand.Parameters.AddWithValue("@username", resource.username);
+                                insertCommand.Parameters.AddWithValue("@template_id", resource.template_id);
+
+                                i = await insertCommand.ExecuteNonQueryAsync();
+                                flg = i > 0;
+                            }
+                        }
+                        else
+                        {
+                            string updateQuery = @"
+                                UPDATE UserDefaultEmailTemplate
+                                SET template_id = @template_id,
+                                    update_date = GETDATE(),
+                                    update_by = @username
+                                WHERE [username] = @username AND [active_status] = 'active';
+                            ";
+
+                            using(var updateCommand = new SqlCommand(updateQuery, connection))
+                            {
+                                updateCommand.Parameters.AddWithValue("@template_id", resource.template_id);
+                                updateCommand.Parameters.AddWithValue("@username", resource.username);
+
+                                i = await updateCommand.ExecuteNonQueryAsync();
+                                flg = i > 0;
+                            }
                         }
                     }
                 }
@@ -307,12 +345,53 @@ namespace ScoreManagement.Query
                 {
                     throw;
                 }
-
                 await connection.CloseAsync();
             }
-
             return flg;
         }
+        //public async Task<bool> SetDefaultTemplateEmail(EmailTemplateResource resource)
+        //{
+        //    bool flg = false;
+        //    int i = 0;
+
+        //    using (var connection = new SqlConnection(_connectionString))
+        //    {
+        //        await connection.OpenAsync();
+        //        try
+        //        {
+        //            // สร้าง query SQL แบบ dynamic
+        //            string query = $@"
+        //                UPDATE UserEmailTemplate
+        //                SET is_default = CASE
+        //                    WHEN template_id = @template_id THEN 1
+        //                    ELSE 0
+        //                END
+        //                WHERE [username] = @username AND [active_status] = 'active'
+        //            ";
+
+        //            using (var command = new SqlCommand(query, connection))
+        //            {
+        //                command.Parameters.AddWithValue("@template_id", resource.template_id);
+        //                command.Parameters.AddWithValue("@username", resource.username);
+
+        //                i = await command.ExecuteNonQueryAsync();
+        //                flg = i == 0 ? false : true;
+        //                if (!flg)
+        //                {
+        //                    throw new Exception("Failed to update UserEmailTemplate");
+        //                }
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            throw;
+        //        }
+
+        //        await connection.CloseAsync();
+        //    }
+
+        //    return flg;
+        //}
 
     }
 }

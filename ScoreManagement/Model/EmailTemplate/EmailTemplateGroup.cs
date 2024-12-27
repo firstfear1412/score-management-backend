@@ -3,7 +3,8 @@
     public class EmailTemplateGroup
     {
         public List<TemplateCollection> PrivateTemplates { get; set; } = new List<TemplateCollection>();
-        public List<TemplateCollection> DefaultTemplates { get; set; } = new List<TemplateCollection>();
+        public List<TemplateCollection> BasicTemplates { get; set; } = new List<TemplateCollection>();
+        public Dictionary<string, int?> DefaultTemplates { get; set; } = new Dictionary<string, int?>();
     }
     public class TemplateDetail
     {

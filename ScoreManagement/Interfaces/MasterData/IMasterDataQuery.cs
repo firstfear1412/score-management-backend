@@ -8,5 +8,6 @@ namespace ScoreManagement.Interfaces
         Task<Dictionary<string, string>> GetLanguage(string language);
         Task<List<EmailPlaceholder>> GetEmailPlaceholder();
         Task<List<EmailTemplate>> GetEmailTemplate(string username);
+        Task<Dictionary<string,int?>> GetDefaultEmailTemplate(string username);
     }
 }

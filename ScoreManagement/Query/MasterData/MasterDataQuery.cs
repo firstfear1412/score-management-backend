@@ -37,7 +37,7 @@ namespace ScoreManagement.Query
 
         public Task<List<EmailTemplate>> GetEmailTemplate(string username)
         {
-            var defaultTemplates =  _context.EmailTemplates.Where(x => x.is_private == false && x.active_status == "active");
+            var basicTemplates =  _context.EmailTemplates.Where(x => x.is_private == false && x.active_status == "active");
 
             var privateTemplates = _context.EmailTemplates.Join(
                     _context.UserEmailTemplates,
@@ -46,9 +46,23 @@ namespace ScoreManagement.Query
                     (et, ut) => new { et, ut }
                 )
                 .Where(x => x.ut.username == username && x.et.is_private == true && x.et.active_status == "active").Select(x => x.et);
-            var combinedTemplates = defaultTemplates.Union(privateTemplates).ToListAsync();
+            var combinedTemplates = basicTemplates.Union(privateTemplates).ToListAsync();
 
             return combinedTemplates;
+        }
+        public async Task<Dictionary<string, int?>> GetDefaultEmailTemplate(string username)
+        {
+            //var defaultTemplates = await _context.UserEmailTemplates.Where(x => x.is_default == true && x.username == username && x.active_status == "active")
+            //    .Select(x => new { x.template_id})
+            //    .FirstOrDefaultAsync();
+            var defaultTemplates = await _context.UserDefaultEmailTemplates.Where(x => x.username == username && x.active_status == "active")
+                .Select(x => new { x.template_id })
+                .FirstOrDefaultAsync();
+
+            return new Dictionary<string, int?> 
+            { 
+                { "defaultTemplate_id", defaultTemplates?.template_id } 
+            };
         }
     }
 }

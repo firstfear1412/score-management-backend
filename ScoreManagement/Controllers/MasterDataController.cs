@@ -149,6 +149,8 @@ namespace ScoreManagement.Controllers
                 {
                     message = "Data not found.";
                 }
+                Dictionary<string, int?> defaultTemplate = await _masterDataQuery.GetDefaultEmailTemplate(username);
+
                 groupedTemplates = new EmailTemplateGroup
                 {
                     PrivateTemplates = templates
@@ -163,7 +165,7 @@ namespace ScoreManagement.Controllers
                                 Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
                             }
                         }).ToList(),
-                    DefaultTemplates = templates
+                    BasicTemplates = templates
                         .Where(x => !x.is_private)
                         .Select(x => new TemplateCollection
                         {
@@ -174,7 +176,8 @@ namespace ScoreManagement.Controllers
                                 Subject = x.subject,
                                 Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
                             }
-                        }).ToList()
+                        }).ToList(),
+                    DefaultTemplates = defaultTemplate
                 };
             }
             catch (Exception ex) {

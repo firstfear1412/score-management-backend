@@ -20,6 +20,7 @@ namespace ScoreManagement.Entity
         public DbSet<PlaceholderMapping> PlaceholderMappings { get; set; }
         public DbSet<UserEmailTemplate> UserEmailTemplates { get; set; }
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
+        public DbSet<UserDefaultEmailTemplate> UserDefaultEmailTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -67,6 +68,10 @@ namespace ScoreManagement.Entity
                 .Entity<EmailTemplate>()
                 .ToTable("EmailTemplate")
                 .HasKey(a => new { a.template_id });
+            modelBuilder
+                .Entity<UserDefaultEmailTemplate>()
+                .ToTable("UserDefaultEmailTemplate")
+                .HasKey(a => new { a.username, a.template_id });
         }
 
         public override int SaveChanges()
