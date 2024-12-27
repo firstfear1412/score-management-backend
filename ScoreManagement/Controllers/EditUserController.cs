@@ -52,6 +52,7 @@ namespace ScoreManagement.Controllers
                 return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
+
         [HttpPost("InsertUser")]
         public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources)
         {
@@ -60,34 +61,70 @@ namespace ScoreManagement.Controllers
                 return BadRequest(new { success = false, message = "Invalid input data.", errors = ModelState });
             }
 
-            bool isSuccess = false;
-            string message = string.Empty;
             try
             {
-                foreach (var resource in resources)
+                // ตรวจสอบอีเมลซ้ำกันภายในรายการที่ส่งมา
+                var duplicateEmails = resources
+                    .GroupBy(r => r.email)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicateEmails.Any())
                 {
-                    //user.password = _encryptService.EncryptPassword(user.password!);
-                    resource.password = _encryptService.EncryptPassword(resource.teacher_code);
-
-                    resource.create_date = DateTime.Now;
-                    //resource.create_by = User.Identity?.Name ?? "Rawee";
-                    resource.active_status = "active";
-
-                    isSuccess = await _userQuery.InsertUser(resource);
-                    message = isSuccess ? "User inserted successfully." : "Failed to insert user.";
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Duplicate emails found in the input data.",
+                        errors = duplicateEmails.Select(email => $"Email {email} is duplicated in the input data.")
+                    });
                 }
 
-                var response = ApiResponse(
-                    isSuccess: isSuccess,
-                    messageDescription: message,
-                    objectResponse: resources);
-                return StatusCode(isSuccess ? 201 : 400, response);
+                // ตรวจสอบอีเมลซ้ำกับในฐานข้อมูล
+                var existingEmails = new List<string>();
+                foreach (var resource in resources)
+                {
+                    if (await _userQuery.CheckEmailExist(resource.email))
+                    {
+                        existingEmails.Add(resource.email);
+                    }
+                }
+
+                if (existingEmails.Any())
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Some emails are already in use.",
+                        errors = existingEmails.Select(email => $"Email {email} already exists in the system.")
+                    });
+                }
+
+                // เริ่มกระบวนการเพิ่มข้อมูลผู้ใช้
+                foreach (var resource in resources)
+                {
+                    // เข้ารหัสรหัสผ่าน
+                    resource.password = _encryptService.EncryptPassword(resource.teacher_code);
+                    resource.create_date = DateTime.Now;
+                    resource.active_status = "active";
+
+                    await _userQuery.InsertUser(resource);
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "All users inserted successfully.",
+                    data = resources
+                });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
+
+
         [HttpPost("UpdateUser")]
         public async Task<IActionResult> UpdateUser([FromBody] UserResource resource)
         {

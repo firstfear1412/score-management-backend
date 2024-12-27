@@ -227,6 +227,22 @@ namespace ScoreManagement.Query
             return users;
         }
 
+        public async Task<bool> CheckEmailExist(string email)
+        {
+            const string query = @"SELECT COUNT(1) FROM [User] WHERE email = @Email";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Email", email);
+                    var result = await command.ExecuteScalarAsync();
+                    return Convert.ToInt32(result) > 0; // ถ้ามีอีเมลอยู่แล้ว, คืนค่า true
+                }
+            }
+        }
+
         public async Task<bool> InsertUser(UserResource resource)
         {
             const string queryPrefix = @"SELECT byte_code FROM SystemParam

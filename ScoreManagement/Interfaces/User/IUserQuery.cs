@@ -13,6 +13,8 @@ namespace ScoreManagement.Interfaces
 
         Task<bool> InsertUser(UserResource resource);
 
+        Task<bool> CheckEmailExist(string email);
+
         Task<bool> UpdateUserById(UserResource resource, string query);
     }
 }

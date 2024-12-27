@@ -197,9 +197,6 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
-
-
-
         [AllowAnonymous]
         [HttpPost("CreateManual")]
         public IActionResult CreatUserManual([FromBody] User model)
