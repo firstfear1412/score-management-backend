@@ -100,7 +100,7 @@ namespace ScoreManagement.Query
 
         public async Task<User?> GetUserInfo(UserResource resource)
         {
-            User? user = null;
+            User? userInfo = null;
             string query = @"
                     SELECT
                              u.[username],
@@ -136,26 +136,31 @@ namespace ScoreManagement.Query
                         {
                             if (reader.Read())
                             {
-                                user = new User
-                                {
-                                    username = reader.IsDBNull(0) ? null : reader.GetString(0),
-                                    email = reader.IsDBNull(1) ? null : reader.GetString(1),
-                                    teacher_code = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                    prefix_description_th = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                    prefix_description_en = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                    firstname = reader.IsDBNull(5) ? null : reader.GetString(5),
-                                    lastname = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                    active_status = reader.IsDBNull(7) ? null : reader.GetString(7),
-                                    role_description_th = reader.IsDBNull(8) ? null : reader.GetString(8),
-                                    role_description_en = reader.IsDBNull(9) ? null : reader.GetString(9)
+                                int col = 0;
+                                int colNull = 0;
+                                User result = new User();
 
-                                };
+                                result.username = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.teacher_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.prefix_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.prefix_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.active_status = !reader.IsDBNull(colNull++) ?   reader.GetString(col): default; col++;
+                                result.role_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.role_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+
+                                col = 0;
+                                colNull = 0;
+                                userInfo = result;
                             }
                         }
                     }
                 }
+                await connection.CloseAsync();
             }
-            return user;
+            return userInfo;
         }
 
         public async Task<List<UserResource>> GetAllUsers()

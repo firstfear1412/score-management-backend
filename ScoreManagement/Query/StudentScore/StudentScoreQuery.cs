@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Model.SubjectScore;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using ScoreManagement.Model.ScoreAnnoucement;
+using NPOI.OpenXmlFormats;
+using NPOI.SS.Formula.Functions;
+using System.Collections.Generic;
 
 namespace ScoreManagement.Query
 {
@@ -106,7 +110,7 @@ namespace ScoreManagement.Query
                 {
                     throw;
                 }
-                
+
                 await connection.CloseAsync();
             }
 
@@ -191,7 +195,7 @@ namespace ScoreManagement.Query
                         //}
                         var result = await cmd1.ExecuteScalarAsync();
                         int templateId = Convert.ToInt32(result);
-                        if(templateId == 0)
+                        if (templateId == 0)
                         {
                             throw new Exception("Failed to retrive the generated template_id or insert into EmailTemplate failed");
                         }
@@ -214,11 +218,12 @@ namespace ScoreManagement.Query
                             }
                         }
                     }
-                    
+
                     await tran.CommitAsync();
                     return true;
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
                     await tran.RollbackAsync();
                     throw;
                 }
@@ -311,7 +316,7 @@ namespace ScoreManagement.Query
                                 );
                             ";
 
-                            using (var  insertCommand = new SqlCommand(insertQuery, connection))
+                            using (var insertCommand = new SqlCommand(insertQuery, connection))
                             {
                                 insertCommand.Parameters.AddWithValue("@username", resource.username);
                                 insertCommand.Parameters.AddWithValue("@template_id", resource.template_id);
@@ -330,7 +335,7 @@ namespace ScoreManagement.Query
                                 WHERE [username] = @username AND [active_status] = 'active';
                             ";
 
-                            using(var updateCommand = new SqlCommand(updateQuery, connection))
+                            using (var updateCommand = new SqlCommand(updateQuery, connection))
                             {
                                 updateCommand.Parameters.AddWithValue("@template_id", resource.template_id);
                                 updateCommand.Parameters.AddWithValue("@username", resource.username);
@@ -349,6 +354,119 @@ namespace ScoreManagement.Query
             }
             return flg;
         }
+        public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByCondition(ScoreAnnoucementResource resource)
+        {
+            var scoreAnnoucementList = new List<ScoreAnnoucementResource>();
+            string query = @"
+                    SELECT 
+                        ss.row_id,
+                        ss.subject_id,
+                        ss.academic_year,
+                        ss.semester,
+                        ss.[section],
+                        ss.student_id,
+                        ss.seat_no,
+                        ss.accumulated_score,
+                        ss.midterm_score,
+                        ss.final_score,
+                        ss.send_status AS send_status_code,
+                        spp1.byte_desc_th AS send_status_desc_th,
+                        spp1.byte_desc_en AS send_status_desc_en,
+                        ss.active_status AS score_active_status,
+                        ss.create_date AS score_create_date,
+                        ss.create_by AS score_create_by,
+                        ss.update_by AS score_update_by,
+                        spp.byte_desc_th AS prefix_th,
+                        spp.byte_desc_en AS prefix_en,
+                        s.firstname,
+                        s.lastname,
+                        s.major_code,
+                        s.email,
+                        s.active_status AS student_active_status,
+                        s.create_date AS student_create_date,
+                        s.create_by AS student_create_by,
+                        s.update_date AS student_update_date,
+                        s.update_by AS student_update_by
+                    FROM 
+                        ScoreManagement.dbo.SubjectScore AS ss
+                    INNER JOIN 
+                        ScoreManagement.dbo.Student AS s
+                    ON 
+                        ss.student_id = s.student_id
+                    LEFT JOIN 
+                        [ScoreManagement].[dbo].[SystemParam] AS spp 
+                       ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
+                    LEFT JOIN 
+                        [ScoreManagement].[dbo].[SystemParam] AS spp1 
+                       ON ss.send_status = spp1.byte_code AND spp1.byte_reference = 'send_status'
+                    WHERE ss.create_by = @teacher_code 
+                        AND ss.active_status = 'active' 
+                        AND s.active_status = 'active'
+                        AND ss.subject_id = @subject_id
+       ";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@teacher_code", resource.score_create_by);
+                    command.Parameters.AddWithValue("@subject_id", resource.subject_id);
+                    
+
+                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    {
+                        if (!reader.HasRows)
+                        {
+                            return new List<ScoreAnnoucementResource>();
+                        }
+                        while (reader.Read())
+                        {
+                            int col = 0;
+                            int colNull = 0;
+                            ScoreAnnoucementResource result = new ScoreAnnoucementResource();
+                            result.row_id = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.subject_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.academic_year = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.semester = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.section = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.seat_no = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.accumulated_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.midterm_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.final_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.send_status_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.send_status_desc_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.send_status_desc_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.score_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.prefix_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.prefix_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.major_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.student_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_update_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.student_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+
+                            col = 0;
+                            colNull = 0;
+                            scoreAnnoucementList.Add(result);
+                        }
+                    }
+                }
+                await connection.CloseAsync();
+            }
+
+            return scoreAnnoucementList;
+        }
+
+
         //public async Task<bool> SetDefaultTemplateEmail(EmailTemplateResource resource)
         //{
         //    bool flg = false;
