@@ -47,6 +47,7 @@ namespace ScoreManagement.Controllers
 
             try
             {
+                if(!string.IsNullOrEmpty(resource.subject_name) || !string.IsNullOrEmpty(resource.subject_id)) { 
                     var scoreQuery = await _studentScoreQuery.GetScoreAnnoucementByCondition(resource); // Call GetUserInfo method to retrieve user data
                     
 
@@ -62,7 +63,12 @@ namespace ScoreManagement.Controllers
                         messageKey = "data_not_found";
                         messageDesc = "Data not found";
                     }
-                
+                }
+                else
+                {
+                        messageDesc = "กรุณากรอกรหัสวิชาหรือรายชื่อวิชา";
+                       }
+
             }
             catch (Exception ex)
             {

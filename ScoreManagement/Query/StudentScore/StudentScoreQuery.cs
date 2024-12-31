@@ -402,8 +402,30 @@ namespace ScoreManagement.Query
                     WHERE ss.create_by = @teacher_code 
                         AND ss.active_status = 'active' 
                         AND s.active_status = 'active'
-                        AND ss.subject_id = @subject_id
-       ";
+                   ";
+            if (!string.IsNullOrEmpty(resource.subject_id))
+            {
+                query += @" AND ss.subject_id = @subject_id";
+            }            
+            if (!string.IsNullOrEmpty(resource.subject_name))
+            {
+                query += @" AND ss.subject_id IN (
+                             SELECT subject_id
+                             FROM ScoreManagement.dbo.Subject
+                             WHERE subject_name LIKE '%' + @subject_name + '%')";
+            }
+            if (!string.IsNullOrEmpty(resource.send_status_code))
+            {
+                query += @" AND ss.send_status = @send_status_code";
+            }
+            if (!string.IsNullOrEmpty(resource.firstname))
+            {
+                query += @" AND s.firstname LIKE '%' + @firstname+ '%'";
+            }
+            if (!string.IsNullOrEmpty(resource.lastname))
+            {
+                query += @" AND s.firstname LIKE '%' + @lastname+ '%'";
+            }
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -412,7 +434,10 @@ namespace ScoreManagement.Query
                 {
                     command.Parameters.AddWithValue("@teacher_code", resource.score_create_by);
                     command.Parameters.AddWithValue("@subject_id", resource.subject_id);
-                    
+                    command.Parameters.AddWithValue("@send_status_code", resource.send_status_code);
+                    command.Parameters.AddWithValue("@subject_name", resource.subject_name);
+                    command.Parameters.AddWithValue("@firstname", resource.firstname);
+                    command.Parameters.AddWithValue("@lastname", resource.lastname);
 
                     using (SqlDataReader reader = await command.ExecuteReaderAsync())
                     {
