@@ -418,13 +418,9 @@ namespace ScoreManagement.Query
             {
                 query += @" AND ss.send_status = @send_status_code";
             }
-            if (!string.IsNullOrEmpty(resource.firstname))
+            if (!string.IsNullOrEmpty(resource.full_name))
             {
-                query += @" AND s.firstname LIKE '%' + @firstname+ '%'";
-            }
-            if (!string.IsNullOrEmpty(resource.lastname))
-            {
-                query += @" AND s.firstname LIKE '%' + @lastname+ '%'";
+                query += @" AND CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname,ss.student_id) LIKE '%' + @full_name + '%'";
             }
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -436,8 +432,7 @@ namespace ScoreManagement.Query
                     command.Parameters.AddWithValue("@subject_id", resource.subject_id);
                     command.Parameters.AddWithValue("@send_status_code", resource.send_status_code);
                     command.Parameters.AddWithValue("@subject_name", resource.subject_name);
-                    command.Parameters.AddWithValue("@firstname", resource.firstname);
-                    command.Parameters.AddWithValue("@lastname", resource.lastname);
+                    command.Parameters.AddWithValue("@full_name", resource.full_name);
 
                     using (SqlDataReader reader = await command.ExecuteReaderAsync())
                     {

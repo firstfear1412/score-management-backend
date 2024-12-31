@@ -21,6 +21,7 @@
         public string? score_update_by { get; set; }
         public string? prefix_th { get; set; }
         public string? prefix_en { get; set; }
+        public string? full_name { get; set; }
         public string? firstname { get; set; }
         public string? lastname { get; set; }
         public string? major_code { get; set; }
