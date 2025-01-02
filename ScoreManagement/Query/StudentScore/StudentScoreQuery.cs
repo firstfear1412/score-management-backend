@@ -110,17 +110,21 @@ namespace ScoreManagement.Query
                 {
                     // สร้าง query SQL แบบ dynamic
                     string updateSubjectScoreQuery = @"
-                        UPDATE SubjectScore
-                        SET send_status = @send_status,
-                            send_desc = @send_desc,
-                            update_date = GETDATE(),
-                            update_by = @username
-                        WHERE [subject_id] = @subject_id 
-                            AND [academic_year] = @academic_year
-                            AND [semester] = @semester
-                            AND [section] = @section
-                            AND [student_id] = @student_id
-                            AND [active_status] = 'active';
+                        UPDATE ss
+                        SET ss.send_status = @send_status,
+                            ss.send_desc = @send_desc,
+                            ss.update_date = GETDATE(),
+                            ss.update_by = @username
+                        FROM [SubjectScore] ss
+                        INNER JOIN [SubjectHeader] sh
+                            ON ss.[sys_subject_no] = sh.[sys_subject_no]
+                        WHERE ss.[student_id] = @student_id
+                          AND ss.[active_status] = 'active'
+                          AND sh.[academic_year] = @academic_year
+                          AND sh.[semester] = @semester
+                          AND sh.[section] = @section
+                          AND sh.[subject_id] = @subject_id
+                          AND sh.[active_status] = 'active';
                     ";
 
                     using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection))
@@ -494,16 +498,19 @@ namespace ScoreManagement.Query
                                     }
                                 }
                             }
-
+                            int? sysSubjectNo = null;
                             string checkSubjectScoreQuery = @"
-                                SELECT COUNT(*)
-                                FROM SubjectScore
-                                WHERE [subject_id] = @subject_id 
-                                    AND [academic_year] = @academic_year
-                                    AND [semester] = @semester
-                                    AND [section] = @section
-                                    AND [student_id] = @student_id
-                                    AND [active_status] = 'active';
+                                SELECT sh.[sys_subject_no]
+                                FROM SubjectScore ss
+                                INNER JOIN [SubjectHeader] sh
+                                    ON ss.[sys_subject_no] = sh.[sys_subject_no]
+                                WHERE ss.[student_id] = @student_id
+                                    AND ss.[active_status] = 'active'
+                                    AND sh.[academic_year] = @academic_year
+                                    AND sh.[semester] = @semester
+                                    AND sh.[section] = @section
+                                    AND sh.[subject_id] = @subject_id 
+                                    AND sh.[active_status] = 'active';
                             ";
 
                             using (var checkCommand = new SqlCommand(checkSubjectScoreQuery, connection))
@@ -513,9 +520,15 @@ namespace ScoreManagement.Query
                                 checkCommand.Parameters.AddWithValue("@semester", subject.semester);
                                 checkCommand.Parameters.AddWithValue("@section", subject.section);
                                 checkCommand.Parameters.AddWithValue("@username", username);
-                                int countSubjectScore = (int)await checkCommand.ExecuteScalarAsync();
+                                using (var reader = await checkCommand.ExecuteReaderAsync())
+                                {
+                                    if (reader.Read())
+                                    {
+                                        sysSubjectNo = reader["sys_subject_no"] as int?;
+                                    }
+                                }
 
-                                if (countSubjectScore == 0)
+                                if (sysSubjectNo == null)
                                 {
                                     string checkStudentQuery = @"
                                         SELECT COUNT(*)
@@ -582,10 +595,7 @@ namespace ScoreManagement.Query
 
                                         string insertSubjectScoreQuery = @"
                                             INSERT INTO SubjectScore ( 
-                                                [subject_id],
-                                                [academic_year],
-                                                [semester],  
-                                                [section],  
+                                                [sys_subject_no], 
                                                 [student_id],  
                                                 [seat_no],  
                                                 [accumulated_score],
@@ -599,10 +609,7 @@ namespace ScoreManagement.Query
                                             )  
                                             VALUES  
                                             (  
-                                                @subject_id,
-                                                @academic_year,
-                                                @semester,
-                                                @section,
+                                                @sys_subject_no,
                                                 @student_id,
                                                 @seat_no,
                                                 @accumulated_score,
@@ -618,10 +625,7 @@ namespace ScoreManagement.Query
 
                                         using (var insertSubjectCommand = new SqlCommand(insertSubjectScoreQuery, connection))
                                         {
-                                            insertSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                            insertSubjectCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                            insertSubjectCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                            insertSubjectCommand.Parameters.AddWithValue("@section", subject.section);
+                                            insertSubjectCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
                                             insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
                                             insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
                                             insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
@@ -641,25 +645,25 @@ namespace ScoreManagement.Query
                                 else
                                 {
                                     string updateSubjectScoreQuery = @"
-                                        UPDATE SubjectScore
-                                        SET subject_id = @template_id,
-                                            academic_year = @academic_year,
-                                            semester = @semester,
-                                            section = @section,
-                                            seat_no = @seat_no,
-                                            accumulated_score = @accumulated_score,
-                                            midterm_score = @midterm_score,
-                                            final_score = @final_score,
-                                            create_date = GETDATE(),
-                                            create_by = @username,
-                                            update_date = GETDATE(),
-                                            update_by = @username
-                                        WHERE [subject_id] = @subject_id 
-                                            AND [academic_year] = @academic_year
-                                            AND [semester] = @semester
-                                            AND [section] = @section
-                                            AND [student_id] = @student_id
-                                            AND [active_status] = 'active';
+                                        UPDATE ss
+                                        SET ss.seat_no = @seat_no,
+                                            ss.accumulated_score = @accumulated_score,
+                                            ss.midterm_score = @midterm_score,
+                                            ss.final_score = @final_score,
+                                            ss.create_date = GETDATE(),
+                                            ss.create_by = @username,
+                                            ss.update_date = GETDATE(),
+                                            ss.update_by = @username
+                                        FROM [SubjectScore] ss
+                                        INNER JOIN [SubjectHeader] sh
+                                            ON ss.[sys_subject_no] = sh.[sys_subject_no]
+                                        WHERE ss.[student_id] = @student_id
+                                          AND ss.[active_status] = 'active'
+                                          AND sh.[academic_year] = @academic_year
+                                          AND sh.[semester] = @semester
+                                          AND sh.[section] = @section
+                                          AND sh.[subject_id] = @subject_id
+                                          AND sh.[active_status] = 'active';
                                     ";
 
                                     using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection))

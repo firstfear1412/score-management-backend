@@ -1,9 +1,13 @@
-﻿namespace ScoreManagement.Model.Table
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ScoreManagement.Model.Table
 {
     public class SubjectScore
     {
-        public int row_id { get; set; }
+        [Key]
+        public int sys_subject_no { get; set; }
 
+        [Key]
         public string? subject_id { get; set; }
 
         public string? academic_year { get; set; }
