@@ -53,17 +53,113 @@ namespace ScoreManagement.Controllers
             }
         }
 
+        //[HttpPost("InsertUser")]
+        //public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = new { th = "ข้อมูลที่ส่งมาไม่ถูกต้อง", en = "Invalid input data." },
+        //            errors = ModelState
+        //        });
+        //    }
+
+        //    try
+        //    {
+        //        // Check for duplicate emails in the input list
+        //        var duplicateEmails = resources
+        //            .GroupBy(r => r.email)
+        //            .Where(g => g.Count() > 1)
+        //            .Select(g => g.Key)
+        //            .ToList();
+
+        //        if (duplicateEmails.Any())
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = new { th = "พบอีเมลที่ซ้ำกันในข้อมูลที่ส่งมา", en = "Duplicate emails found in the input data." },
+        //                errors = duplicateEmails.Select(email => new
+        //                {
+        //                    th = $"อีเมล {email} ซ้ำกันในข้อมูลที่ส่งมา",
+        //                    en = $"Email {email} is duplicated in the input data."
+        //                })
+        //            });
+        //        }
+
+        //        // Check for duplicate emails in the database
+        //        var existingEmails = new List<string>();
+        //        foreach (var resource in resources)
+        //        {
+        //            if (await _userQuery.CheckEmailExist(resource.email))
+        //            {
+        //                existingEmails.Add(resource.email);
+        //            }
+        //        }
+
+        //        if (existingEmails.Any())
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = new { th = "มีอีเมลบางรายการที่ใช้งานแล้ว", en = "Some emails are already in use." },
+        //                errors = existingEmails.Select(email => new
+        //                {
+        //                    th = $"อีเมล {email} ถูกใช้งานแล้วในระบบ",
+        //                    en = $"Email {email} already exists in the system."
+        //                })
+        //            });
+        //        }
+
+        //        // Insert users
+        //        foreach (var resource in resources)
+        //        {
+        //            resource.password = _encryptService.EncryptPassword(resource.teacher_code);
+        //            resource.create_date = DateTime.Now;
+        //            resource.active_status = "active";
+
+        //            await _userQuery.InsertUser(resource);
+        //        }
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            message = new { th = "บันทึกข้อมูลสำเร็จ", en = "All users inserted successfully." },
+        //            data = resources
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = new { th = "เกิดข้อผิดพลาด", en = "An error occurred" },
+        //            error = ex.Message
+        //        });
+        //    }
+        //}
+
         [HttpPost("InsertUser")]
-        public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources)
+        public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources, [FromQuery] string language = "th")
         {
+            // Default to 'th' if language is not provided
+            language = string.IsNullOrEmpty(language) ? "th" : language.ToLower();
+
             if (!ModelState.IsValid)
             {
-                return BadRequest(new { success = false, message = "Invalid input data.", errors = ModelState });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = language == "th" ? "ข้อมูลที่ส่งมาไม่ถูกต้อง" : "Invalid input data.",
+                    errors = ModelState
+                });
             }
 
             try
             {
-                // ตรวจสอบอีเมลซ้ำกันภายในรายการที่ส่งมา
+                // Check for duplicate emails in the input list
                 var duplicateEmails = resources
                     .GroupBy(r => r.email)
                     .Where(g => g.Count() > 1)
@@ -75,12 +171,16 @@ namespace ScoreManagement.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Duplicate emails found in the input data.",
-                        errors = duplicateEmails.Select(email => $"Email {email} is duplicated in the input data.")
+                        message = new { th = "พบอีเมลที่ซ้ำกัน", en = "Duplicate emails found in the input data." },
+                        errors = duplicateEmails.Select(email => new
+                        {
+                            th = $"อีเมล {email} ซ้ำกัน",
+                            en = $"Email {email} is duplicated in the input data."
+                        })
                     });
                 }
 
-                // ตรวจสอบอีเมลซ้ำกับในฐานข้อมูล
+                // Check for duplicate emails in the database
                 var existingEmails = new List<string>();
                 foreach (var resource in resources)
                 {
@@ -95,15 +195,18 @@ namespace ScoreManagement.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Some emails are already in use.",
-                        errors = existingEmails.Select(email => $"Email {email} already exists in the system.")
+                        message = language == "th" ? "มีอีเมลบางรายการที่ใช้งานแล้ว" : "Some emails are already in use.",
+                        errors = existingEmails.Select(email => new
+                        {
+                            th = $"อีเมล {email} ถูกใช้งานแล้วในระบบ",
+                            en = $"Email {email} already exists in the system."
+                        }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
                     });
                 }
 
-                // เริ่มกระบวนการเพิ่มข้อมูลผู้ใช้
+                // Insert users
                 foreach (var resource in resources)
                 {
-                    // เข้ารหัสรหัสผ่าน
                     resource.password = _encryptService.EncryptPassword(resource.teacher_code);
                     resource.create_date = DateTime.Now;
                     resource.active_status = "active";
@@ -114,13 +217,18 @@ namespace ScoreManagement.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "All users inserted successfully.",
+                    message = language == "th" ? "บันทึกข้อมูลสำเร็จ" : "All users inserted successfully.",
                     data = resources
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = language == "th" ? "เกิดข้อผิดพลาด" : "An error occurred",
+                    error = ex.Message
+                });
             }
         }
 

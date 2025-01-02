@@ -8,10 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Model.SubjectScore;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using ScoreManagement.Model.ScoreAnnoucement;
+using NPOI.OpenXmlFormats;
 using NPOI.SS.Formula.Functions;
-using Org.BouncyCastle.Asn1.Cmp;
-using System.Transactions;
-using MathNet.Numerics.Distributions;
+using System.Collections.Generic;
 
 namespace ScoreManagement.Query
 {
@@ -440,269 +440,136 @@ namespace ScoreManagement.Query
             }
             return flg;
         }
-        public async Task<bool> UploadStudentScore(SubjectDetailUpload subject ,ScoreStudent student, string username)
+        public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByCondition(ScoreAnnoucementResource resource)
         {
-            bool flg = false;
-            int i = 0;
-            using (var connection = new SqlConnection(_connectionString))
+            var scoreAnnoucementList = new List<ScoreAnnoucementResource>();
+            string query = @"
+                    SELECT 
+                        ss.row_id,
+                        ss.subject_id,
+                        ss.academic_year,
+                        ss.semester,
+                        ss.[section],
+                        ss.student_id,
+                        ss.seat_no,
+                        ss.accumulated_score,
+                        ss.midterm_score,
+                        ss.final_score,
+                        ss.send_status AS send_status_code,
+                        spp1.byte_desc_th AS send_status_desc_th,
+                        spp1.byte_desc_en AS send_status_desc_en,
+                        ss.active_status AS score_active_status,
+                        ss.create_date AS score_create_date,
+                        ss.create_by AS score_create_by,
+                        ss.update_by AS score_update_by,
+                        spp.byte_desc_th AS prefix_th,
+                        spp.byte_desc_en AS prefix_en,
+                        s.firstname,
+                        s.lastname,
+                        s.major_code,
+                        s.email,
+                        s.active_status AS student_active_status,
+                        s.create_date AS student_create_date,
+                        s.create_by AS student_create_by,
+                        s.update_date AS student_update_date,
+                        s.update_by AS student_update_by
+                    FROM 
+                        ScoreManagement.dbo.SubjectScore AS ss
+                    INNER JOIN 
+                        ScoreManagement.dbo.Student AS s
+                    ON 
+                        ss.student_id = s.student_id
+                    LEFT JOIN 
+                        [ScoreManagement].[dbo].[SystemParam] AS spp 
+                       ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
+                    LEFT JOIN 
+                        [ScoreManagement].[dbo].[SystemParam] AS spp1 
+                       ON ss.send_status = spp1.byte_code AND spp1.byte_reference = 'send_status'
+                    WHERE ss.create_by = @teacher_code 
+                        AND ss.active_status = 'active' 
+                        AND s.active_status = 'active'
+                   ";
+            if (!string.IsNullOrEmpty(resource.subject_id))
+            {
+                query += @" AND ss.subject_id = @subject_id";
+            }            
+            if (!string.IsNullOrEmpty(resource.subject_name))
+            {
+                query += @" AND ss.subject_id IN (
+                             SELECT subject_id
+                             FROM ScoreManagement.dbo.Subject
+                             WHERE subject_name LIKE '%' + @subject_name + '%')";
+            }
+            if (!string.IsNullOrEmpty(resource.send_status_code))
+            {
+                query += @" AND ss.send_status = @send_status_code";
+            }
+            if (!string.IsNullOrEmpty(resource.full_name))
+            {
+                query += @" AND CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname,ss.student_id) LIKE '%' + @full_name + '%'";
+            }
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                using (var transaction = connection.BeginTransaction())
+
+                using (SqlCommand command = new SqlCommand(query, connection))
                 {
-                    try
-                    {
-                        string checkSubjectQuery = @"
-                            SELECT COUNT(*)
-                            FROM Subject
-                            WHERE [subject_id] = @subject_id 
-                                AND [active_status] = 'active';
-                        ";
+                    command.Parameters.AddWithValue("@teacher_code", resource.score_create_by);
+                    command.Parameters.AddWithValue("@subject_id", resource.subject_id);
+                    command.Parameters.AddWithValue("@send_status_code", resource.send_status_code);
+                    command.Parameters.AddWithValue("@subject_name", resource.subject_name);
+                    command.Parameters.AddWithValue("@full_name", resource.full_name);
 
-                        using (var checkSubjectCommand = new SqlCommand(checkSubjectQuery, connection))
+                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    {
+                        if (!reader.HasRows)
                         {
-                            checkSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                            int countSubject = (int)await checkSubjectCommand.ExecuteScalarAsync();
-                            if (countSubject == 0)
-                            {
-                                string insertSubjectQuery = @"
-                                                INSERT INTO Subject ( 
-                                                    [subject_id], 
-                                                    [subject_name],  
-                                                    [active_status],  
-                                                    [create_date],  
-                                                    [create_by],  
-                                                    [update_date],
-                                                    [update_by]
-                                                )  
-                                                VALUES  
-                                                (  
-                                                    @subject_id,  
-                                                    @subject_name,
-                                                    'active',
-                                                    GETDATE(),  
-                                                    @username,  
-                                                    GETDATE(),  
-                                                    @username
-                                                );
-                                            ";
-
-                                using (var insertSubjectCommand = new SqlCommand(insertSubjectQuery, connection))
-                                {
-                                    insertSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                    insertSubjectCommand.Parameters.AddWithValue("@subject_name", subject.subject_name);
-                                    insertSubjectCommand.Parameters.AddWithValue("@username", username);
-
-                                    i = await insertSubjectCommand.ExecuteNonQueryAsync();
-                                    flg = i > 0;
-                                    if (!flg)
-                                    {
-                                        throw new Exception("Failed to insert into Subject");
-                                    }
-                                }
-                            }
-
-                            string checkSubjectScoreQuery = @"
-                                SELECT COUNT(*)
-                                FROM SubjectScore
-                                WHERE [subject_id] = @subject_id 
-                                    AND [academic_year] = @academic_year
-                                    AND [semester] = @semester
-                                    AND [section] = @section
-                                    AND [student_id] = @student_id
-                                    AND [active_status] = 'active';
-                            ";
-
-                            using (var checkCommand = new SqlCommand(checkSubjectScoreQuery, connection))
-                            {
-                                checkCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                checkCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                checkCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                checkCommand.Parameters.AddWithValue("@section", subject.section);
-                                checkCommand.Parameters.AddWithValue("@username", username);
-                                int countSubjectScore = (int)await checkCommand.ExecuteScalarAsync();
-
-                                if (countSubjectScore == 0)
-                                {
-                                    string checkStudentQuery = @"
-                                        SELECT COUNT(*)
-                                        FROM Student
-                                        WHERE [student_id] = @student_id
-                                            AND [active_status] = 'active';
-                                    ";
-
-                                    using (var checkStudentCommand = new SqlCommand(checkStudentQuery, connection))
-                                    {
-                                        checkStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                        int countStudent = (int)await checkStudentCommand.ExecuteScalarAsync();
-
-                                        if (countStudent == 0)
-                                        {
-                                            string insertStudentQuery = @"
-                                                INSERT INTO Student ( 
-                                                    [student_id], 
-                                                    [prefix],  
-                                                    [firstname],  
-                                                    [lastname],  
-                                                    [major_code],  
-                                                    [email],
-                                                    [active_status],
-                                                    [create_date],
-                                                    [create_by],
-                                                    [update_date],
-                                                    [update_by]  
-                                                )  
-                                                VALUES  
-                                                (  
-                                                    @student_id,  
-                                                    @prefix,
-                                                    @firstname,
-                                                    @lastname,
-                                                    @major_code,
-                                                    @email,
-                                                    'active',
-                                                    GETDATE(),  
-                                                    @username,  
-                                                    GETDATE(),  
-                                                    @username
-                                                );
-                                            ";
-
-                                            using (var insertStudentCommand = new SqlCommand(insertStudentQuery, connection))
-                                            {
-                                                insertStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                                insertStudentCommand.Parameters.AddWithValue("@prefix", student.prefix);
-                                                insertStudentCommand.Parameters.AddWithValue("@firstname", student.firstname);
-                                                insertStudentCommand.Parameters.AddWithValue("@lastname", student.lastname);
-                                                insertStudentCommand.Parameters.AddWithValue("@major_code", student.major_code);
-                                                insertStudentCommand.Parameters.AddWithValue("@email", student.email);
-                                                insertStudentCommand.Parameters.AddWithValue("@username", username);
-
-                                                i = await insertStudentCommand.ExecuteNonQueryAsync();
-                                                flg = i > 0;
-                                                if (!flg)
-                                                {
-                                                    throw new Exception("Failed to insert into Student");
-                                                }
-                                            }
-                                        }
-
-                                        string insertSubjectScoreQuery = @"
-                                            INSERT INTO SubjectScore ( 
-                                                [subject_id],
-                                                [academic_year],
-                                                [semester],  
-                                                [section],  
-                                                [student_id],  
-                                                [seat_no],  
-                                                [accumulated_score],
-                                                [midterm_score],
-                                                [final_score],
-                                                [active_status],
-                                                [create_date],
-                                                [create_by],
-                                                [update_date],
-                                                [update_by]  
-                                            )  
-                                            VALUES  
-                                            (  
-                                                @subject_id,
-                                                @academic_year,
-                                                @semester,
-                                                @section,
-                                                @student_id,
-                                                @seat_no,
-                                                @accumulated_score,
-                                                @midterm_score,
-                                                @final_score,
-                                                'active',
-                                                GETDATE(),  
-                                                @username,  
-                                                GETDATE(),  
-                                                @username
-                                            );
-                                        ";
-
-                                        using (var insertSubjectCommand = new SqlCommand(insertSubjectScoreQuery, connection))
-                                        {
-                                            insertSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                            insertSubjectCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                            insertSubjectCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                            insertSubjectCommand.Parameters.AddWithValue("@section", subject.section);
-                                            insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                            insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                            insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@final_score", student.final_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@username", username);
-
-                                            i = await insertSubjectCommand.ExecuteNonQueryAsync();
-                                            flg = i > 0;
-                                            if (!flg)
-                                            {
-                                                throw new Exception("Failed to insert into SubjectScore");
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    string updateSubjectScoreQuery = @"
-                                        UPDATE SubjectScore
-                                        SET subject_id = @template_id,
-                                            academic_year = @academic_year,
-                                            semester = @semester,
-                                            section = @section,
-                                            seat_no = @seat_no,
-                                            accumulated_score = @accumulated_score,
-                                            midterm_score = @midterm_score,
-                                            final_score = @final_score,
-                                            create_date = GETDATE(),
-                                            create_by = @username,
-                                            update_date = GETDATE(),
-                                            update_by = @username
-                                        WHERE [subject_id] = @subject_id 
-                                            AND [academic_year] = @academic_year
-                                            AND [semester] = @semester
-                                            AND [section] = @section
-                                            AND [student_id] = @student_id
-                                            AND [active_status] = 'active';
-                                    ";
-
-                                    using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection))
-                                    {
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@section", subject.section);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", student.final_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@username", username);
-
-                                        i = await updateSubjectScoreCommand.ExecuteNonQueryAsync();
-                                        flg = i > 0;
-                                        if (!flg)
-                                        {
-                                            throw new Exception("Failed to update SubjectScore");
-                                        }
-                                    }
-                                }
-                            }
+                            return new List<ScoreAnnoucementResource>();
                         }
-                        transaction.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        transaction.Rollback();
-                        throw;
+                        while (reader.Read())
+                        {
+                            int col = 0;
+                            int colNull = 0;
+                            ScoreAnnoucementResource result = new ScoreAnnoucementResource();
+                            result.row_id = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.subject_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.academic_year = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.semester = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.section = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.seat_no = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.accumulated_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.midterm_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.final_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                            result.send_status_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.send_status_desc_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.send_status_desc_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.score_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.score_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.prefix_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.prefix_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.major_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.student_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            result.student_update_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
+                            result.student_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+
+                            col = 0;
+                            colNull = 0;
+                            scoreAnnoucementList.Add(result);
+                        }
                     }
                 }
                 await connection.CloseAsync();
             }
-            return flg;
-        }
 
+            return scoreAnnoucementList;
+        }
     }
 }
