@@ -12,7 +12,7 @@
 
         public string? student_id { get; set; }
 
-        public int? seat_no { get; set; }
+        public string? seat_no { get; set; }
 
         public int? accumulated_score { get; set; }
 

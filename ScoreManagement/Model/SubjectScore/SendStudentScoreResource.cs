@@ -5,6 +5,7 @@
         public SubjectDetail SubjectDetail { get; set; }
         public EmailDetail EmailDetail { get; set; }
         public string username { get; set; }
+        public List<string> student_id { get; set; }  // Changed to List<string>
     }
     public class SubjectDetail
     {
@@ -13,7 +14,7 @@
         public string academic_year { get; set; }
         public string semester { get; set; }
         public string section { get; set; }
-        public string student_id { get; set; }
+        //public string student_id { get; set; }
     }
 
     public class EmailDetail
