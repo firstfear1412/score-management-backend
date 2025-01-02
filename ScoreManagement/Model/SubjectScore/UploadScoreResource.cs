@@ -41,5 +41,6 @@
         public string academic_year { get; set; }
         public string semester { get; set; }
         public string section { get; set; }
+        public List<string> teacher { get; set; }
     }
 }

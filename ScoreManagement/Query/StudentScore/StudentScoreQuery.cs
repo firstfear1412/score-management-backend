@@ -456,7 +456,7 @@ namespace ScoreManagement.Query
                                 AND [active_status] = 'active';
                         ";
 
-                        using (var checkSubjectCommand = new SqlCommand(checkSubjectQuery, connection))
+                        using (var checkSubjectCommand = new SqlCommand(checkSubjectQuery, connection, transaction))
                         {
                             checkSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
                             int countSubject = (int)await checkSubjectCommand.ExecuteScalarAsync();
@@ -484,7 +484,7 @@ namespace ScoreManagement.Query
                                         );
                                     ";
 
-                                using (var insertSubjectCommand = new SqlCommand(insertSubjectQuery, connection))
+                                using (var insertSubjectCommand = new SqlCommand(insertSubjectQuery, connection, transaction))
                                 {
                                     insertSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
                                     insertSubjectCommand.Parameters.AddWithValue("@subject_name", subject.subject_name);
@@ -498,197 +498,297 @@ namespace ScoreManagement.Query
                                     }
                                 }
                             }
-                            int? sysSubjectNo = null;
-                            string checkSubjectScoreQuery = @"
-                                SELECT sh.[sys_subject_no]
-                                FROM SubjectScore ss
-                                INNER JOIN [SubjectHeader] sh
-                                    ON ss.[sys_subject_no] = sh.[sys_subject_no]
-                                WHERE ss.[student_id] = @student_id
-                                    AND ss.[active_status] = 'active'
-                                    AND sh.[academic_year] = @academic_year
-                                    AND sh.[semester] = @semester
-                                    AND sh.[section] = @section
-                                    AND sh.[subject_id] = @subject_id 
-                                    AND sh.[active_status] = 'active';
-                            ";
-
-                            using (var checkCommand = new SqlCommand(checkSubjectScoreQuery, connection))
+                        }
+                        int? sysSubjectNo = null;
+                        string checkSubjectHeaderQuery = @"
+                            SELECT sh.[sys_subject_no]
+                            FROM SubjectHeader sh
+                            WHERE sh.[subject_id] = @subject_id
+                                AND sh.[semester] = @semester
+                                AND sh.[section] = @section
+                                AND sh.[academic_year] = @academic_year
+                                AND sh.[active_status] = 'active';
+                        ";
+                        using (var checkCommand = new SqlCommand(checkSubjectHeaderQuery, connection, transaction))
+                        {
+                            checkCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+                            checkCommand.Parameters.AddWithValue("@semester", subject.semester);
+                            checkCommand.Parameters.AddWithValue("@section", subject.section);
+                            checkCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
+                            using (var reader = await checkCommand.ExecuteReaderAsync())
                             {
-                                checkCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                checkCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                checkCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                checkCommand.Parameters.AddWithValue("@section", subject.section);
-                                checkCommand.Parameters.AddWithValue("@username", username);
-                                using (var reader = await checkCommand.ExecuteReaderAsync())
+                                if (reader.Read())
                                 {
-                                    if (reader.Read())
-                                    {
-                                        sysSubjectNo = reader["sys_subject_no"] as int?;
-                                    }
+                                    sysSubjectNo = reader["sys_subject_no"] as int?;
                                 }
+                            }
 
-                                if (sysSubjectNo == null)
+                            if (sysSubjectNo == null)
+                            {
+                                string insertSubjectHeaderQuery = @"
+                                    INSERT INTO SubjectHeader(
+                                        [subject_id]
+                                        ,[academic_year]
+                                        ,[semester]
+                                        ,[section]
+                                        ,[active_status]
+                                        ,[create_date]
+                                        ,[create_by]
+                                        ,[update_date]
+                                        ,[update_by] 
+                                    )  
+                                    VALUES  
+                                    (  
+                                        @subject_id,
+                                        @academic_year,
+                                        @semester,
+                                        @section,
+                                        'active',
+                                        GETDATE(),  
+                                        @username,  
+                                        GETDATE(),  
+                                        @username
+                                    );
+                                    SELECT SCOPE_IDENTITY();
+                                ";
+
+                                using (var insertSubjectHeaderCommand = new SqlCommand(insertSubjectHeaderQuery, connection, transaction))
                                 {
-                                    string checkStudentQuery = @"
-                                        SELECT COUNT(*)
-                                        FROM Student
-                                        WHERE [student_id] = @student_id
-                                            AND [active_status] = 'active';
-                                    ";
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@semester", subject.semester);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@section", subject.section);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@username", username);
 
-                                    using (var checkStudentCommand = new SqlCommand(checkStudentQuery, connection))
+                                    var result = await insertSubjectHeaderCommand.ExecuteScalarAsync();
+                                    sysSubjectNo = Convert.ToInt32(result);
+                                    if (sysSubjectNo == 0)
                                     {
-                                        checkStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                        int countStudent = (int)await checkStudentCommand.ExecuteScalarAsync();
-
-                                        if (countStudent == 0)
-                                        {
-                                            string insertStudentQuery = @"
-                                                INSERT INTO Student ( 
-                                                    [student_id], 
-                                                    [prefix],  
-                                                    [firstname],  
-                                                    [lastname],  
-                                                    [major_code],  
-                                                    [email],
-                                                    [active_status],
-                                                    [create_date],
-                                                    [create_by],
-                                                    [update_date],
-                                                    [update_by]  
-                                                )  
-                                                VALUES  
-                                                (  
-                                                    @student_id,  
-                                                    @prefix,
-                                                    @firstname,
-                                                    @lastname,
-                                                    @major_code,
-                                                    @email,
-                                                    'active',
-                                                    GETDATE(),  
-                                                    @username,  
-                                                    GETDATE(),  
-                                                    @username
-                                                );
-                                            ";
-
-                                            using (var insertStudentCommand = new SqlCommand(insertStudentQuery, connection))
-                                            {
-                                                insertStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                                insertStudentCommand.Parameters.AddWithValue("@prefix", student.prefix);
-                                                insertStudentCommand.Parameters.AddWithValue("@firstname", student.firstname);
-                                                insertStudentCommand.Parameters.AddWithValue("@lastname", student.lastname);
-                                                insertStudentCommand.Parameters.AddWithValue("@major_code", student.major_code);
-                                                insertStudentCommand.Parameters.AddWithValue("@email", student.email);
-                                                insertStudentCommand.Parameters.AddWithValue("@username", username);
-
-                                                i = await insertStudentCommand.ExecuteNonQueryAsync();
-                                                flg = i > 0;
-                                                if (!flg)
-                                                {
-                                                    throw new Exception("Failed to insert into Student");
-                                                }
-                                            }
-                                        }
-
-                                        string insertSubjectScoreQuery = @"
-                                            INSERT INTO SubjectScore ( 
-                                                [sys_subject_no], 
-                                                [student_id],  
-                                                [seat_no],  
-                                                [accumulated_score],
-                                                [midterm_score],
-                                                [final_score],
-                                                [active_status],
-                                                [create_date],
-                                                [create_by],
-                                                [update_date],
-                                                [update_by]  
-                                            )  
-                                            VALUES  
-                                            (  
-                                                @sys_subject_no,
-                                                @student_id,
-                                                @seat_no,
-                                                @accumulated_score,
-                                                @midterm_score,
-                                                @final_score,
-                                                'active',
-                                                GETDATE(),  
-                                                @username,  
-                                                GETDATE(),  
-                                                @username
-                                            );
-                                        ";
-
-                                        using (var insertSubjectCommand = new SqlCommand(insertSubjectScoreQuery, connection))
-                                        {
-                                            insertSubjectCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
-                                            insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                            insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                            insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@final_score", student.final_score);
-                                            insertSubjectCommand.Parameters.AddWithValue("@username", username);
-
-                                            i = await insertSubjectCommand.ExecuteNonQueryAsync();
-                                            flg = i > 0;
-                                            if (!flg)
-                                            {
-                                                throw new Exception("Failed to insert into SubjectScore");
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    string updateSubjectScoreQuery = @"
-                                        UPDATE ss
-                                        SET ss.seat_no = @seat_no,
-                                            ss.accumulated_score = @accumulated_score,
-                                            ss.midterm_score = @midterm_score,
-                                            ss.final_score = @final_score,
-                                            ss.create_date = GETDATE(),
-                                            ss.create_by = @username,
-                                            ss.update_date = GETDATE(),
-                                            ss.update_by = @username
-                                        FROM [SubjectScore] ss
-                                        INNER JOIN [SubjectHeader] sh
-                                            ON ss.[sys_subject_no] = sh.[sys_subject_no]
-                                        WHERE ss.[student_id] = @student_id
-                                          AND ss.[active_status] = 'active'
-                                          AND sh.[academic_year] = @academic_year
-                                          AND sh.[semester] = @semester
-                                          AND sh.[section] = @section
-                                          AND sh.[subject_id] = @subject_id
-                                          AND sh.[active_status] = 'active';
-                                    ";
-
-                                    using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection))
-                                    {
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@semester", subject.semester);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@section", subject.section);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", student.final_score);
-                                        updateSubjectScoreCommand.Parameters.AddWithValue("@username", username);
-
-                                        i = await updateSubjectScoreCommand.ExecuteNonQueryAsync();
-                                        flg = i > 0;
-                                        if (!flg)
-                                        {
-                                            throw new Exception("Failed to update SubjectScore");
-                                        }
+                                        throw new Exception("Failed to retrive the generated sys_subject_no or insert into EmailTemplate failed");
                                     }
                                 }
                             }
                         }
+                        string checkSubjectLecturerQuery = @"
+                            SELECT COUNT(*)
+                            FROM SubjectLecturer
+                            WHERE [sys_subject_no] = @sys_subject_no;
+                        ";
+                        using (var checkSubjectLecturerCommand = new SqlCommand(checkSubjectLecturerQuery, connection, transaction))
+                        {
+                            checkSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                            int countSubjectLecturer = (int)await checkSubjectLecturerCommand.ExecuteScalarAsync();
+                            if (countSubjectLecturer == 0)
+                            {
+                                string insertSubjectHeaderQuery = @"
+                                    INSERT INTO SubjectLecturer(
+                                        [sys_subject_no]
+                                        ,[teacher_code]
+                                        ,[active_status]
+                                        ,[create_date]
+                                        ,[create_by]
+                                        ,[update_date]
+                                        ,[update_by] 
+                                    )  
+                                    VALUES  
+                                    (  
+                                        @sys_subject_no,
+                                        @teacher_code,
+                                        'active',
+                                        GETDATE(),  
+                                        @username,  
+                                        GETDATE(),  
+                                        @username
+                                    );
+                                ";
+                                foreach (var teacherCode in subject.teacher)
+                                {
+                                    using (var insertSubjectHeaderCommand = new SqlCommand(insertSubjectHeaderQuery, connection, transaction))
+                                    {
+                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@teacher_code", teacherCode);
+                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@username", username);
+
+                                        i = await insertSubjectHeaderCommand.ExecuteNonQueryAsync();
+                                        flg = i > 0;
+                                        if (!flg)
+                                        {
+                                            throw new Exception("Failed to insert into SubjectLecturer");
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                        string checkStudentQuery = @"
+                            SELECT COUNT(*)
+                            FROM Student
+                            WHERE [student_id] = @student_id
+                                AND [active_status] = 'active';
+                        ";
+
+                        using (var checkStudentCommand = new SqlCommand(checkStudentQuery, connection, transaction))
+                        {
+                            checkStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
+                            int countStudent = (int)await checkStudentCommand.ExecuteScalarAsync();
+
+                            if (countStudent == 0)
+                            {
+                                string insertStudentQuery = @"
+                                    INSERT INTO Student ( 
+                                        [student_id], 
+                                        [prefix],  
+                                        [firstname],  
+                                        [lastname],  
+                                        [major_code],  
+                                        [email],
+                                        [active_status],
+                                        [create_date],
+                                        [create_by],
+                                        [update_date],
+                                        [update_by]  
+                                    )  
+                                    VALUES  
+                                    (  
+                                        @student_id,  
+                                        @prefix,
+                                        @firstname,
+                                        @lastname,
+                                        @major_code,
+                                        @email,
+                                        'active',
+                                        GETDATE(),  
+                                        @username,  
+                                        GETDATE(),  
+                                        @username
+                                    );
+                                ";
+
+                                using (var insertStudentCommand = new SqlCommand(insertStudentQuery, connection, transaction))
+                                {
+                                    insertStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
+                                    insertStudentCommand.Parameters.AddWithValue("@prefix", student.prefix);
+                                    insertStudentCommand.Parameters.AddWithValue("@firstname", student.firstname);
+                                    insertStudentCommand.Parameters.AddWithValue("@lastname", student.lastname);
+                                    insertStudentCommand.Parameters.AddWithValue("@major_code", student.major_code);
+                                    insertStudentCommand.Parameters.AddWithValue("@email", student.email);
+                                    insertStudentCommand.Parameters.AddWithValue("@username", username);
+
+                                    i = await insertStudentCommand.ExecuteNonQueryAsync();
+                                    flg = i > 0;
+                                    if (!flg)
+                                    {
+                                        throw new Exception("Failed to insert into Student");
+                                    }
+                                }
+                            }
+                        }
+
+                        string checkSubjectScoreQuery = @"
+                            SELECT COUNT(*)
+                            FROM SubjectScore
+                            WHERE [student_id] = @student_id
+                                AND [sys_subject_no] = @sys_subject_no
+                                AND [active_status] = 'active';
+                        ";
+
+                        using (var checkSubjectScoreCommand = new SqlCommand(checkSubjectScoreQuery, connection, transaction))
+                        {
+                            checkSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
+                            checkSubjectScoreCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                            int countStudent = (int)await checkSubjectScoreCommand.ExecuteScalarAsync();
+
+                            if (countStudent == 0)
+                            {
+                                string insertSubjectScoreQuery = @"
+                                    INSERT INTO SubjectScore ( 
+                                        [sys_subject_no], 
+                                        [student_id],  
+                                        [seat_no],  
+                                        [accumulated_score],
+                                        [midterm_score],
+                                        [final_score],
+                                        [active_status],
+                                        [create_date],
+                                        [create_by],
+                                        [update_date],
+                                        [update_by]  
+                                    )  
+                                    VALUES  
+                                    (  
+                                        @sys_subject_no,
+                                        @student_id,
+                                        @seat_no,
+                                        @accumulated_score,
+                                        @midterm_score,
+                                        @final_score,
+                                        'active',
+                                        GETDATE(),  
+                                        @username,  
+                                        GETDATE(),  
+                                        @username
+                                    );
+                                ";
+
+                                using (var insertSubjectCommand = new SqlCommand(insertSubjectScoreQuery, connection, transaction))
+                                {
+                                    insertSubjectCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                    insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
+                                    insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
+                                    insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
+                                    insertSubjectCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
+                                    insertSubjectCommand.Parameters.AddWithValue("@final_score", student.final_score);
+                                    insertSubjectCommand.Parameters.AddWithValue("@username", username);
+
+                                    i = await insertSubjectCommand.ExecuteNonQueryAsync();
+                                    flg = i > 0;
+                                    if (!flg)
+                                    {
+                                        throw new Exception("Failed to insert into SubjectScore");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string updateSubjectScoreQuery = @"
+                                    UPDATE [SubjectScore]
+                                    SET seat_no = @seat_no,
+                                        accumulated_score = @accumulated_score,
+                                        midterm_score = @midterm_score,
+                                        final_score = @final_score,
+                                        create_date = GETDATE(),
+                                        create_by = @username,
+                                        update_date = GETDATE(),
+                                        update_by = @username
+                                    WHERE [student_id] = @student_id
+                                        AND [sys_subject_no] = @sys_subject_no
+                                        AND [active_status] = 'active'
+                                ";
+
+                                using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection, transaction))
+                                {
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", student.final_score);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@username", username);
+
+                                    i = await updateSubjectScoreCommand.ExecuteNonQueryAsync();
+                                    flg = i > 0;
+                                    if (!flg)
+                                    {
+                                        throw new Exception("Failed to update SubjectScore");
+                                    }
+                                }
+                            }
+                        }
+
+                        
                         transaction.Commit();
                     }
                     catch (Exception ex)
@@ -701,6 +801,269 @@ namespace ScoreManagement.Query
             }
             return flg;
         }
+        //public async Task<bool> UploadStudentScore(SubjectDetailUpload subject, ScoreStudent student, string username)
+        //{
+        //    bool flg = false;
+        //    int i = 0;
+        //    using (var connection = new SqlConnection(_connectionString))
+        //    {
+        //        await connection.OpenAsync();
+        //        using (var transaction = connection.BeginTransaction())
+        //        {
+        //            try
+        //            {
+        //                string checkSubjectQuery = @"
+        //                    SELECT COUNT(*)
+        //                    FROM Subject
+        //                    WHERE [subject_id] = @subject_id 
+        //                        AND [active_status] = 'active';
+        //                ";
+
+        //                using (var checkSubjectCommand = new SqlCommand(checkSubjectQuery, connection))
+        //                {
+        //                    checkSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+        //                    int countSubject = (int)await checkSubjectCommand.ExecuteScalarAsync();
+        //                    if (countSubject == 0)
+        //                    {
+        //                        string insertSubjectQuery = @"
+        //                                INSERT INTO Subject ( 
+        //                                    [subject_id], 
+        //                                    [subject_name],  
+        //                                    [active_status],  
+        //                                    [create_date],  
+        //                                    [create_by],  
+        //                                    [update_date],
+        //                                    [update_by]
+        //                                )  
+        //                                VALUES  
+        //                                (  
+        //                                    @subject_id,  
+        //                                    @subject_name,
+        //                                    'active',
+        //                                    GETDATE(),  
+        //                                    @username,  
+        //                                    GETDATE(),  
+        //                                    @username
+        //                                );
+        //                            ";
+
+        //                        using (var insertSubjectCommand = new SqlCommand(insertSubjectQuery, connection))
+        //                        {
+        //                            insertSubjectCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+        //                            insertSubjectCommand.Parameters.AddWithValue("@subject_name", subject.subject_name);
+        //                            insertSubjectCommand.Parameters.AddWithValue("@username", username);
+
+        //                            i = await insertSubjectCommand.ExecuteNonQueryAsync();
+        //                            flg = i > 0;
+        //                            if (!flg)
+        //                            {
+        //                                throw new Exception("Failed to insert into Subject");
+        //                            }
+        //                        }
+        //                    }
+        //                    int? sysSubjectNo = null;
+        //                    string checkSubjectScoreQuery = @"
+        //                        SELECT sh.[sys_subject_no]
+        //                        FROM SubjectScore ss
+        //                        INNER JOIN [SubjectHeader] sh
+        //                            ON ss.[sys_subject_no] = sh.[sys_subject_no]
+        //                        WHERE ss.[student_id] = @student_id
+        //                            AND ss.[active_status] = 'active'
+        //                            AND sh.[academic_year] = @academic_year
+        //                            AND sh.[semester] = @semester
+        //                            AND sh.[section] = @section
+        //                            AND sh.[subject_id] = @subject_id 
+        //                            AND sh.[active_status] = 'active';
+        //                    ";
+
+        //                    using (var checkCommand = new SqlCommand(checkSubjectScoreQuery, connection))
+        //                    {
+        //                        checkCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+        //                        checkCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
+        //                        checkCommand.Parameters.AddWithValue("@semester", subject.semester);
+        //                        checkCommand.Parameters.AddWithValue("@section", subject.section);
+        //                        checkCommand.Parameters.AddWithValue("@username", username);
+        //                        using (var reader = await checkCommand.ExecuteReaderAsync())
+        //                        {
+        //                            if (reader.Read())
+        //                            {
+        //                                sysSubjectNo = reader["sys_subject_no"] as int?;
+        //                            }
+        //                        }
+
+        //                        if (sysSubjectNo == null)
+        //                        {
+        //                            string checkStudentQuery = @"
+        //                                SELECT COUNT(*)
+        //                                FROM Student
+        //                                WHERE [student_id] = @student_id
+        //                                    AND [active_status] = 'active';
+        //                            ";
+
+        //                            using (var checkStudentCommand = new SqlCommand(checkStudentQuery, connection))
+        //                            {
+        //                                checkStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
+        //                                int countStudent = (int)await checkStudentCommand.ExecuteScalarAsync();
+
+        //                                if (countStudent == 0)
+        //                                {
+        //                                    string insertStudentQuery = @"
+        //                                        INSERT INTO Student ( 
+        //                                            [student_id], 
+        //                                            [prefix],  
+        //                                            [firstname],  
+        //                                            [lastname],  
+        //                                            [major_code],  
+        //                                            [email],
+        //                                            [active_status],
+        //                                            [create_date],
+        //                                            [create_by],
+        //                                            [update_date],
+        //                                            [update_by]  
+        //                                        )  
+        //                                        VALUES  
+        //                                        (  
+        //                                            @student_id,  
+        //                                            @prefix,
+        //                                            @firstname,
+        //                                            @lastname,
+        //                                            @major_code,
+        //                                            @email,
+        //                                            'active',
+        //                                            GETDATE(),  
+        //                                            @username,  
+        //                                            GETDATE(),  
+        //                                            @username
+        //                                        );
+        //                                    ";
+
+        //                                    using (var insertStudentCommand = new SqlCommand(insertStudentQuery, connection))
+        //                                    {
+        //                                        insertStudentCommand.Parameters.AddWithValue("@student_id", student.student_id);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@prefix", student.prefix);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@firstname", student.firstname);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@lastname", student.lastname);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@major_code", student.major_code);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@email", student.email);
+        //                                        insertStudentCommand.Parameters.AddWithValue("@username", username);
+
+        //                                        i = await insertStudentCommand.ExecuteNonQueryAsync();
+        //                                        flg = i > 0;
+        //                                        if (!flg)
+        //                                        {
+        //                                            throw new Exception("Failed to insert into Student");
+        //                                        }
+        //                                    }
+        //                                }
+
+        //                                string insertSubjectScoreQuery = @"
+        //                                    INSERT INTO SubjectScore ( 
+        //                                        [sys_subject_no], 
+        //                                        [student_id],  
+        //                                        [seat_no],  
+        //                                        [accumulated_score],
+        //                                        [midterm_score],
+        //                                        [final_score],
+        //                                        [active_status],
+        //                                        [create_date],
+        //                                        [create_by],
+        //                                        [update_date],
+        //                                        [update_by]  
+        //                                    )  
+        //                                    VALUES  
+        //                                    (  
+        //                                        @sys_subject_no,
+        //                                        @student_id,
+        //                                        @seat_no,
+        //                                        @accumulated_score,
+        //                                        @midterm_score,
+        //                                        @final_score,
+        //                                        'active',
+        //                                        GETDATE(),  
+        //                                        @username,  
+        //                                        GETDATE(),  
+        //                                        @username
+        //                                    );
+        //                                ";
+
+        //                                using (var insertSubjectCommand = new SqlCommand(insertSubjectScoreQuery, connection))
+        //                                {
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@final_score", student.final_score);
+        //                                    insertSubjectCommand.Parameters.AddWithValue("@username", username);
+
+        //                                    i = await insertSubjectCommand.ExecuteNonQueryAsync();
+        //                                    flg = i > 0;
+        //                                    if (!flg)
+        //                                    {
+        //                                        throw new Exception("Failed to insert into SubjectScore");
+        //                                    }
+        //                                }
+        //                            }
+        //                        }
+        //                        else
+        //                        {
+        //                            string updateSubjectScoreQuery = @"
+        //                                UPDATE ss
+        //                                SET ss.seat_no = @seat_no,
+        //                                    ss.accumulated_score = @accumulated_score,
+        //                                    ss.midterm_score = @midterm_score,
+        //                                    ss.final_score = @final_score,
+        //                                    ss.create_date = GETDATE(),
+        //                                    ss.create_by = @username,
+        //                                    ss.update_date = GETDATE(),
+        //                                    ss.update_by = @username
+        //                                FROM [SubjectScore] ss
+        //                                INNER JOIN [SubjectHeader] sh
+        //                                    ON ss.[sys_subject_no] = sh.[sys_subject_no]
+        //                                WHERE ss.[student_id] = @student_id
+        //                                  AND ss.[active_status] = 'active'
+        //                                  AND sh.[academic_year] = @academic_year
+        //                                  AND sh.[semester] = @semester
+        //                                  AND sh.[section] = @section
+        //                                  AND sh.[subject_id] = @subject_id
+        //                                  AND sh.[active_status] = 'active';
+        //                            ";
+
+        //                            using (var updateSubjectScoreCommand = new SqlCommand(updateSubjectScoreQuery, connection))
+        //                            {
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@subject_id", subject.subject_id);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@academic_year", subject.academic_year);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@semester", subject.semester);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@section", subject.section);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", student.final_score);
+        //                                updateSubjectScoreCommand.Parameters.AddWithValue("@username", username);
+
+        //                                i = await updateSubjectScoreCommand.ExecuteNonQueryAsync();
+        //                                flg = i > 0;
+        //                                if (!flg)
+        //                                {
+        //                                    throw new Exception("Failed to update SubjectScore");
+        //                                }
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //                transaction.Commit();
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                transaction.Rollback();
+        //                throw;
+        //            }
+        //        }
+        //        await connection.CloseAsync();
+        //    }
+        //    return flg;
+        //}
 
         public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByCondition(ScoreAnnoucementResource resource)
         {
@@ -747,7 +1110,7 @@ namespace ScoreManagement.Query
                     LEFT JOIN 
                         [ScoreManagement].[dbo].[SystemParam] AS spp1 
                        ON ss.send_status = spp1.byte_code AND spp1.byte_reference = 'send_status'
-                    WHERE ss.create_by = @teacher_code 
+                    WHERE ss.create_by = @teacher_code
                         AND ss.active_status = 'active' 
                         AND s.active_status = 'active'
                    ";
