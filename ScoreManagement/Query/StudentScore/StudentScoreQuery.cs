@@ -4,14 +4,8 @@ using ScoreManagement.Model.Table;
 using ScoreManagement.Model;
 using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Entity;
-using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Model.SubjectScore;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using ScoreManagement.Model.ScoreAnnoucement;
-using NPOI.OpenXmlFormats;
-using NPOI.SS.Formula.Functions;
-using System.Collections.Generic;
 
 namespace ScoreManagement.Query
 {
