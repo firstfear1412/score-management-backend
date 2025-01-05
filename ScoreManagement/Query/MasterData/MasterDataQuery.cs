@@ -20,7 +20,7 @@ namespace ScoreManagement.Query
 
         public Task<List<SystemParam>> GetSystemParams(string reference)
         {
-            return _context.SystemParams.Where(x => x.byte_reference!.Equals(reference)
+            return _context.SystemParams.Where(x => x.byte_reference!.Equals(reference) && x.active_status == "active"
                             ).ToListAsync();
         }
 
