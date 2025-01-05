@@ -125,6 +125,7 @@ builder.Services.AddTransient<IMailService, MailService>();
 builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
+builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 

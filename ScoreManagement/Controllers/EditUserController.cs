@@ -9,8 +9,8 @@ using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Controllers
 {
-    [AllowAnonymous]
-    //[Authorize]
+    //[AllowAnonymous]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class EditUserController : BaseController
