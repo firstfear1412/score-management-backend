@@ -1,8 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
-using ScoreManagement.Interfaces;
-using ScoreManagement.Model;
 using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Entity;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
 
 
 namespace ScoreManagement.Query
@@ -86,6 +86,48 @@ namespace ScoreManagement.Query
         // Method to fetch 'active_status'
         public Task<List<LovContantsResource>> GetLovActiveStatusQuery() =>
             GetLovQuery("active_status");
+        public async Task<List<SubjectResource>> GetSubjectByConditionQuery(SubjectResource resource)
+        {
+            var subjectList = new List<SubjectResource>();
+            string sqlContext = @"SELECT subject_id,subject_name
+                FROM Subject WHERE CONCAT(subject_id,' ',subject_name) LIKE '%' + @inputSearh + '%'";
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (SqlCommand command = new SqlCommand(sqlContext, connection))
+                    {
+                        // Add parameters
+                        command.Parameters.AddWithValue("@inputSearh", resource.subjectSearch);
+
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var result = new SubjectResource
+                                {
+                                    subject_id = reader["subject_id"]?.ToString(),
+                                    subject_name = reader["subject_name"]?.ToString(),
+
+                                };
+                                subjectList.Add(result);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (add your logging mechanism here)
+                Console.WriteLine($"Error: {ex.Message}");
+                throw;
+            }
+
+            return subjectList;
+        }
     }
 
 }

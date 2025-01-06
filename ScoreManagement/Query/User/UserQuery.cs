@@ -1,13 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
-using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
-using ScoreManagement.Services.Encrypt;
-using ScoreManagement.Common;
-using System.Text;
-using Microsoft.AspNetCore.Http.Metadata;
-using Org.BouncyCastle.Asn1.Cmp;
 
 namespace ScoreManagement.Query
 {
@@ -111,6 +105,7 @@ namespace ScoreManagement.Query
                              u.[firstname],
                              u.[lastname],
                              u.[active_status],
+                             u.role,
                              spr.[byte_desc_th] as role_description_th,
                              spr.[byte_desc_en] as role_description_en
                        FROM [ScoreManagement].[dbo].[User] u
@@ -147,7 +142,8 @@ namespace ScoreManagement.Query
                                 result.prefix_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
                                 result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
                                 result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.active_status = !reader.IsDBNull(colNull++) ?   reader.GetString(col): default; col++;
+                                result.active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                result.role = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
                                 result.role_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
                                 result.role_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
 
@@ -273,11 +269,11 @@ namespace ScoreManagement.Query
                 string prefixValue = null;
                 string roleValue = null;
 
-                using (SqlCommand commandSelectPrefix = new SqlCommand(queryPrefix, connection)) 
+                using (SqlCommand commandSelectPrefix = new SqlCommand(queryPrefix, connection))
                 {
                     commandSelectPrefix.Parameters.AddWithValue("@Prefix", resource.prefix);
                     var result = await commandSelectPrefix.ExecuteScalarAsync();
-                    if(result != null)
+                    if (result != null)
                     {
                         prefixValue = result.ToString();
                     }
@@ -372,7 +368,7 @@ namespace ScoreManagement.Query
                                            AND [email] = @email
                                            ";
 
-                    using (SqlCommand cmd =  new SqlCommand(UpdateQuery, conn))
+                    using (SqlCommand cmd = new SqlCommand(UpdateQuery, conn))
                     {
                         cmd.Transaction = tran;
                         cmd.Parameters.AddWithValue("row_id", resource.row_id);

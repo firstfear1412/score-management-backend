@@ -1,11 +1,11 @@
 ﻿using Microsoft.Data.SqlClient;
-using ScoreManagement.Interfaces;
-using ScoreManagement.Model.Table;
-using ScoreManagement.Model;
 using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Entity;
-using ScoreManagement.Model.SubjectScore;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
+using ScoreManagement.Model.SubjectScore;
+using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Query
 {
@@ -195,7 +195,7 @@ namespace ScoreManagement.Query
                 {
                     throw;
                 }
-                
+
                 await connection.CloseAsync();
             }
 
@@ -280,7 +280,7 @@ namespace ScoreManagement.Query
                         //}
                         var result = await cmd1.ExecuteScalarAsync();
                         int templateId = Convert.ToInt32(result);
-                        if(templateId == 0)
+                        if (templateId == 0)
                         {
                             throw new Exception("Failed to retrive the generated template_id or insert into EmailTemplate failed");
                         }
@@ -303,11 +303,12 @@ namespace ScoreManagement.Query
                             }
                         }
                     }
-                    
+
                     await tran.CommitAsync();
                     return true;
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
                     await tran.RollbackAsync();
                     throw;
                 }
@@ -400,7 +401,7 @@ namespace ScoreManagement.Query
                                 );
                             ";
 
-                            using (var  insertCommand = new SqlCommand(insertQuery, connection))
+                            using (var insertCommand = new SqlCommand(insertQuery, connection))
                             {
                                 insertCommand.Parameters.AddWithValue("@username", resource.username);
                                 insertCommand.Parameters.AddWithValue("@template_id", resource.template_id);
@@ -419,7 +420,7 @@ namespace ScoreManagement.Query
                                 WHERE [username] = @username AND [active_status] = 'active';
                             ";
 
-                            using(var updateCommand = new SqlCommand(updateQuery, connection))
+                            using (var updateCommand = new SqlCommand(updateQuery, connection))
                             {
                                 updateCommand.Parameters.AddWithValue("@template_id", resource.template_id);
                                 updateCommand.Parameters.AddWithValue("@username", resource.username);
@@ -788,7 +789,7 @@ namespace ScoreManagement.Query
                             }
                         }
 
-                        
+
                         transaction.Commit();
                     }
                     catch (Exception ex)
@@ -1065,136 +1066,161 @@ namespace ScoreManagement.Query
         //    return flg;
         //}
 
-        public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByCondition(ScoreAnnoucementResource resource)
+
+        public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByConditionQuery(ScoreAnnoucementResource resource)
         {
             var scoreAnnoucementList = new List<ScoreAnnoucementResource>();
+
             string query = @"
-                    SELECT 
-                        ss.row_id,
-                        ss.subject_id,
-                        ss.academic_year,
-                        ss.semester,
-                        ss.[section],
-                        ss.student_id,
-                        ss.seat_no,
-                        ss.accumulated_score,
-                        ss.midterm_score,
-                        ss.final_score,
-                        ss.send_status AS send_status_code,
-                        spp1.byte_desc_th AS send_status_desc_th,
-                        spp1.byte_desc_en AS send_status_desc_en,
-                        ss.active_status AS score_active_status,
-                        ss.create_date AS score_create_date,
-                        ss.create_by AS score_create_by,
-                        ss.update_by AS score_update_by,
-                        spp.byte_desc_th AS prefix_th,
-                        spp.byte_desc_en AS prefix_en,
-                        s.firstname,
-                        s.lastname,
-                        s.major_code,
-                        s.email,
-                        s.active_status AS student_active_status,
-                        s.create_date AS student_create_date,
-                        s.create_by AS student_create_by,
-                        s.update_date AS student_update_date,
-                        s.update_by AS student_update_by
-                    FROM 
-                        ScoreManagement.dbo.SubjectScore AS ss
-                    INNER JOIN 
-                        ScoreManagement.dbo.Student AS s
-                    ON 
-                        ss.student_id = s.student_id
-                    LEFT JOIN 
-                        [ScoreManagement].[dbo].[SystemParam] AS spp 
-                       ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
-                    LEFT JOIN 
-                        [ScoreManagement].[dbo].[SystemParam] AS spp1 
-                       ON ss.send_status = spp1.byte_code AND spp1.byte_reference = 'send_status'
-                    WHERE ss.create_by = @teacher_code
-                        AND ss.active_status = 'active' 
-                        AND s.active_status = 'active'
-                   ";
-            if (!string.IsNullOrEmpty(resource.subject_id))
+        SELECT 
+            sh.sys_subject_no, 
+            sh.subject_id, 
+            sh.academic_year, 
+            sh.semester, 
+            sh.[section],
+            sl.teacher_code, 
+            sl.active_status AS lecturer_active_status, 
+            ss.student_id,
+            s.prefix as prefix_code,
+            spp.byte_desc_th as prefix_desc_th,
+            spp.byte_desc_en as prefix_desc_en,
+            s.firstname,
+            s.lastname,
+            s.major_code,
+            ss.seat_no, 
+            ss.accumulated_score, 
+            ss.midterm_score, 
+            ss.final_score, 
+            ss.send_status as send_status_code,                        
+            sps.byte_desc_th as send_status_code_desc_th,
+            sps.byte_desc_en as send_status_code_desc_en,
+            ss.send_desc,
+            s.email 
+        FROM SubjectHeader sh
+        LEFT JOIN SubjectLecturer sl
+            ON sh.sys_subject_no = sl.sys_subject_no
+        LEFT JOIN SubjectScore ss
+            ON sh.sys_subject_no = ss.sys_subject_no
+        LEFT JOIN Student s
+            ON ss.student_id = s.student_id
+        LEFT JOIN Subject sj
+            ON sj.subject_id = sh.subject_id
+        LEFT JOIN SystemParam spp 
+            ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
+        LEFT JOIN SystemParam sps
+            ON ss.send_status = sps.byte_code AND sps.byte_reference = 'send_status'
+        LEFT JOIN [User] u 
+            ON u.[role] IS NOT NULL
+    ";
+
+            // List to dynamically store conditions
+            var conditions = new List<string>();
+
+            // Add conditions based on the provided inputs
+            if (!string.IsNullOrEmpty(resource.subjectSearch))
             {
-                query += @" AND ss.subject_id = @subject_id";
-            }            
-            if (!string.IsNullOrEmpty(resource.subject_name))
-            {
-                query += @" AND ss.subject_id IN (
-                             SELECT subject_id
-                             FROM ScoreManagement.dbo.Subject
-                             WHERE subject_name LIKE '%' + @subject_name + '%')";
+                conditions.Add("CONCAT(sh.subject_id,' ', sj.subject_name ) LIKE '%' + @subjectSearch + '%'");
             }
+
+            if (!string.IsNullOrEmpty(resource.teacher_code))
+            {
+                conditions.Add("sl.teacher_code = @teacherCode");
+            }
+
+            if (!string.IsNullOrEmpty(resource.section))
+            {
+                conditions.Add("sh.[section] = @section");
+            }
+
+            if (resource.semester != null)
+            {
+                conditions.Add("sh.semester = @semester");
+            }
+
+            if (!string.IsNullOrEmpty(resource.academic_year))
+            {
+                conditions.Add("sh.academic_year = @academic_year");
+            }
+
             if (!string.IsNullOrEmpty(resource.send_status_code))
             {
-                query += @" AND ss.send_status = @send_status_code";
+                conditions.Add("ss.send_status = @send_status_code");
             }
-            if (!string.IsNullOrEmpty(resource.full_name))
-            {
-                query += @" AND CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname,ss.student_id) LIKE '%' + @full_name + '%'";
-            }
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
 
-                using (SqlCommand command = new SqlCommand(query, connection))
+            if (!string.IsNullOrEmpty(resource.studentSearch))
+            {
+                conditions.Add("CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname, ss.student_id) LIKE '%' + @studentSearch + '%'");
+            }
+
+            // Only add WHERE if there are conditions
+            if (conditions.Any())
+            {
+                query += " WHERE " + string.Join(" AND ", conditions);
+            }
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    command.Parameters.AddWithValue("@teacher_code", resource.score_create_by);
-                    command.Parameters.AddWithValue("@subject_id", resource.subject_id);
-                    command.Parameters.AddWithValue("@send_status_code", resource.send_status_code);
-                    command.Parameters.AddWithValue("@subject_name", resource.subject_name);
-                    command.Parameters.AddWithValue("@full_name", resource.full_name);
+                    await connection.OpenAsync();
 
-                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    using (SqlCommand command = new SqlCommand(query, connection))
                     {
-                        if (!reader.HasRows)
-                        {
-                            return new List<ScoreAnnoucementResource>();
-                        }
-                        while (reader.Read())
-                        {
-                            int col = 0;
-                            int colNull = 0;
-                            ScoreAnnoucementResource result = new ScoreAnnoucementResource();
-                            result.row_id = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.subject_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.academic_year = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.semester = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.section = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.student_id = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.seat_no = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.accumulated_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.midterm_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.final_score = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                            result.send_status_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.send_status_desc_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.send_status_desc_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.score_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.score_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
-                            result.score_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.score_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.prefix_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.prefix_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.major_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.student_active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.student_create_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
-                            result.student_create_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                            result.student_update_date = !reader.IsDBNull(colNull++) ? reader.GetDateTime(col) : (DateTime?)null; col++;
-                            result.student_update_by = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                        // Add parameters
+                        command.Parameters.AddWithValue("@subjectSearch", (object)resource.subjectSearch ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@teacherCode", (object)resource.teacher_code ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@section", (object)resource.section ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@semester", (object)resource.semester ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@academic_year", (object)resource.academic_year ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@send_status_code", (object)resource.send_status_code ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@studentSearch", (object)resource.studentSearch ?? DBNull.Value);
 
-                            col = 0;
-                            colNull = 0;
-                            scoreAnnoucementList.Add(result);
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var result = new ScoreAnnoucementResource
+                                {
+                                    sys_subject_no = reader["sys_subject_no"] as int? ?? default,
+                                    subject_id = reader["subject_id"]?.ToString(),
+                                    academic_year = reader["academic_year"]?.ToString(),
+                                    semester = reader["semester"] as int? ?? default,
+                                    section = reader["section"]?.ToString(),
+                                    teacher_code = reader["teacher_code"]?.ToString(),
+                                    lecturer_active_status = reader["lecturer_active_status"]?.ToString(),
+                                    student_id = reader["student_id"]?.ToString(),
+                                    prefix_code = reader["prefix_code"]?.ToString(),
+                                    prefix_desc_th = reader["prefix_desc_th"]?.ToString(),
+                                    prefix_desc_en = reader["prefix_desc_en"]?.ToString(),
+                                    firstname = reader["firstname"]?.ToString(),
+                                    lastname = reader["lastname"]?.ToString(),
+                                    major_code = reader["major_code"]?.ToString(),
+                                    seat_no = reader["seat_no"]?.ToString(),
+                                    accumulated_score = reader["accumulated_score"] as int? ?? default,
+                                    midterm_score = reader["midterm_score"] as int? ?? default,
+                                    final_score = reader["final_score"] as int? ?? default,
+                                    send_status_code = reader["send_status_code"]?.ToString(),
+                                    send_status_code_desc_th = reader["send_status_code_desc_th"]?.ToString(),
+                                    send_status_code_desc_en = reader["send_status_code_desc_en"]?.ToString(),
+                                    send_desc = reader["send_desc"]?.ToString(),
+                                    email = reader["email"]?.ToString()
+                                };
+                                scoreAnnoucementList.Add(result);
+                            }
                         }
                     }
                 }
-                await connection.CloseAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (add your logging mechanism here)
+                Console.WriteLine($"Error: {ex.Message}");
+                throw;
             }
 
             return scoreAnnoucementList;
         }
+
     }
+
 }

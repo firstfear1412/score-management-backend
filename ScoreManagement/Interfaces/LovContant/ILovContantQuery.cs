@@ -1,8 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using ScoreManagement.Model;
-using ScoreManagement.Model.ScoreAnnoucement;
-using ScoreManagement.Model.SubjectScore;
-using ScoreManagement.Model.Table;
+﻿using ScoreManagement.Model;
 
 namespace ScoreManagement.Interfaces
 {
@@ -16,6 +12,7 @@ namespace ScoreManagement.Interfaces
         Task<List<LovContantsResource>> GetLovSemesterQuery();
         Task<List<LovContantsResource>> GetLovSectionQuery();
         Task<List<LovContantsResource>> GetLovActiveStatusQuery();
+        Task<List<SubjectResource>> GetSubjectByConditionQuery(SubjectResource resource);
     }
 
 }
