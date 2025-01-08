@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Controllers.Base;
-using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
-using ScoreManagement.Model;
 using ScoreManagement.Services.Encrypt;
 
 
@@ -102,7 +100,7 @@ namespace ScoreManagement.Controllers
 
             try
             {
-                 // Invoke the provided query function
+                // Invoke the provided query function
 
                 if (result != null)
                 {
@@ -136,7 +134,7 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
-       
+
     }
 
 

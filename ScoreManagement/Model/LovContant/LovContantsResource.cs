@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace ScoreManagement.Model
+﻿namespace ScoreManagement.Model
 {
     public class LovContantsResource
     {

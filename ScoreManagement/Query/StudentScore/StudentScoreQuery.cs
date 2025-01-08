@@ -1116,15 +1116,17 @@ namespace ScoreManagement.Query
             // List to dynamically store conditions
             var conditions = new List<string>();
 
+            if (resource.role == 2)
+            {
+                if (!string.IsNullOrEmpty(resource.teacher_code))
+                {
+                    conditions.Add("sl.teacher_code = @teacherCode");
+                }
+            }
             // Add conditions based on the provided inputs
             if (!string.IsNullOrEmpty(resource.subjectSearch))
             {
                 conditions.Add("CONCAT(sh.subject_id,' ', sj.subject_name ) LIKE '%' + @subjectSearch + '%'");
-            }
-
-            if (!string.IsNullOrEmpty(resource.teacher_code))
-            {
-                conditions.Add("sl.teacher_code = @teacherCode");
             }
 
             if (!string.IsNullOrEmpty(resource.section))
