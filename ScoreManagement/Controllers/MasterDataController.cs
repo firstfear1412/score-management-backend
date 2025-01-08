@@ -191,5 +191,36 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
 
+        //[AllowAnonymous]
+        [HttpGet("Subject")]
+        public async Task<IActionResult> GetSubject()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<SubjectResponse> subjects = new List<SubjectResponse>();
+            try
+            {
+                subjects = await _masterDataQuery.GetSubject();
+                if (subjects.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: subjects
+            );
+            return StatusCode(200, response);
+        }
     }
 }

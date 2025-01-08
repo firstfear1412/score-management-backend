@@ -56,7 +56,8 @@ namespace ScoreManagement.Controllers
                 }
                 foreach (var student in resource.data)
                 {
-                    var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
+                    //var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
+                    var result = true;
 
                     if (!result)
                     {

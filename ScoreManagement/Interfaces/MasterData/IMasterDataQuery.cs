@@ -1,4 +1,5 @@
 ﻿using ScoreManagement.Model.Table;
+using ScoreManagement.Model;
 
 namespace ScoreManagement.Interfaces
 {
@@ -9,5 +10,6 @@ namespace ScoreManagement.Interfaces
         Task<List<EmailPlaceholder>> GetEmailPlaceholder();
         Task<List<EmailTemplate>> GetEmailTemplate(string username);
         Task<Dictionary<string,int?>> GetDefaultEmailTemplate(string username);
+        Task<List<SubjectResponse>> GetSubject();
     }
 }

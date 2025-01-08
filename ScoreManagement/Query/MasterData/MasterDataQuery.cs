@@ -2,6 +2,7 @@
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model.Table;
+using ScoreManagement.Model;
 using System.Linq;
 
 namespace ScoreManagement.Query
@@ -63,6 +64,16 @@ namespace ScoreManagement.Query
             { 
                 { "defaultTemplate_id", defaultTemplates?.template_id } 
             };
+        }
+        public async Task<List<SubjectResponse>> GetSubject()
+        {
+            return await _context.Subjects.Where(x => x.active_status == "active")
+                .Select(x => new SubjectResponse
+                {
+                    subject_id = x.subject_id,
+                    subject_name = x.subject_name,
+                })
+                .ToListAsync();
         }
     }
 }
