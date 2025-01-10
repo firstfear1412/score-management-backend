@@ -7,18 +7,38 @@ namespace ScoreManagement.Controllers
 {
     public class NotificationController : Controller
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly INotificationHub _notificationHub;
 
-        public NotificationController(IHubContext<NotificationHub> hubContext)
+        public NotificationController(INotificationHub notificationHub)
         {
-            _hubContext = hubContext;
+            _notificationHub = notificationHub;
         }
 
-        [HttpPost("send")]
-        public async Task<IActionResult> SendNotification([FromBody] NotificationResource request)
+        [HttpPost]
+        public async Task<IActionResult> SendNotification(string userName, string message)
         {
-            await _hubContext.Clients.User(request.User).SendAsync("ReceiveNotification", request.Message);
-            return Ok(new { Message = "Notification sent successfully!" });
+            if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(message))
+            {
+                return BadRequest("User name or message cannot be empty.");
+            }
+
+            // Send notification using the service (which could be NotificationHub)
+            await _notificationHub.SendNotifyToUser(userName, message);
+
+            return Ok("Notification sent successfully.");
         }
+        //private readonly IHubContext<NotificationHub> _hubContext;
+
+        //public NotificationController(IHubContext<NotificationHub> hubContext)
+        //{
+        //    _hubContext = hubContext;
+        //}
+
+        //[HttpPost("send")]
+        //public async Task<IActionResult> SendNotification([FromBody] NotificationResource request)
+        //{
+        //    await _hubContext.Clients.User(request.User).SendAsync("ReceiveNotification", request.Message);
+        //    return Ok(new { Message = "Notification sent successfully!" });
+        //}
     }
 }
