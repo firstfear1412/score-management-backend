@@ -4,7 +4,6 @@ using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
-using ScoreManagement.Model.SubjectScore;
 using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Query
