@@ -154,7 +154,7 @@ builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
 builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
-builder.Services.AddTransient<INotificationHub, NotificationHub>();
+builder.Services.AddTransient<INotificationQuery, NotificationQuery>();
 
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

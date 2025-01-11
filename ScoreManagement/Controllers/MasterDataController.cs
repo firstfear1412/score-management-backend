@@ -1,14 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
-using ScoreManagement.Services.Encrypt;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ScoreManagement.Controllers
 {
@@ -219,6 +215,37 @@ namespace ScoreManagement.Controllers
                 isSuccess: isSuccess,
                 messageDescription: message,
                 objectResponse: subjects
+            );
+            return StatusCode(200, response);
+        }
+
+        [HttpGet("NotifyTemplate")]
+        public async Task<IActionResult> GetNotifyTemplate()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<NotificationTemplateResponse> templates = new List<NotificationTemplateResponse>();
+            try
+            {
+                templates = await _masterDataQuery.GetNotifyTemplate();
+                if (templates.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: templates
             );
             return StatusCode(200, response);
         }

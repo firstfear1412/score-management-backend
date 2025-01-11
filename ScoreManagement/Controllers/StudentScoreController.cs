@@ -1,15 +1,12 @@
-﻿using MathNet.Numerics.Distributions;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
+using ScoreManagement.Hubs;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
-using ScoreManagement.Model.SubjectScore;
-using ScoreManagement.Model.Table;
-using ScoreManagement.Query;
 using ScoreManagement.Services.Encrypt;
 using ScoreManagement.Services.Mail;
 //using System.Reflection;
@@ -27,13 +24,15 @@ namespace ScoreManagement.Controllers
         private readonly IConfiguration _configuration;
         private readonly IStudentScoreQuery _studentScoreQuery;
         private readonly MailService _mailService;
-        public StudentScoreController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IStudentScoreQuery studentScoreQuery, IMailService mailService)
+        private readonly IHubContext<NotificationHub> _notifyHub;
+        public StudentScoreController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IStudentScoreQuery studentScoreQuery, IMailService mailService, IHubContext<NotificationHub> notifyHub)
         {
             _context = context;
             _encryptService = encryptService;
             _configuration = configuration;
             _studentScoreQuery = studentScoreQuery;
             _mailService = (MailService)mailService;
+            _notifyHub = notifyHub;
         }
 
         #region controller
@@ -48,7 +47,7 @@ namespace ScoreManagement.Controllers
             {
                 if (resource == null || resource.data == null)
                 {
-                        return StatusCode(400, new
+                    return StatusCode(400, new
                     {
                         isSuccess = false,
                         message = "resource is required"
@@ -56,8 +55,8 @@ namespace ScoreManagement.Controllers
                 }
                 foreach (var student in resource.data)
                 {
-                    //var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
-                    var result = true;
+                    var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
+                    //var result = true;
 
                     if (!result)
                     {
@@ -97,6 +96,8 @@ namespace ScoreManagement.Controllers
             List<string> sendFailStudentList = new List<string>();
             // ใช้ Dictionary เพื่อเก็บ studentId และ Error Message
             Dictionary<string, string> sendFailStudentDetails = new Dictionary<string, string>();
+            int successCount = 0; // เก็บจำนวนการส่งสำเร็จ
+            int failCount = 0;    // เก็บจำนวนการส่งล้มเหลว
 
             try
             {
@@ -104,6 +105,7 @@ namespace ScoreManagement.Controllers
                 {
                     return StatusCode(400, new
                     {
+                        isSuccess = isSuccess,
                         message = "Resource is required"
                     });
                 }
@@ -132,6 +134,7 @@ namespace ScoreManagement.Controllers
                         if (isSent)
                         {
                             await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail, studentId, resource.username, 3);
+                            successCount++;
                         }
                         else
                         {
@@ -142,10 +145,12 @@ namespace ScoreManagement.Controllers
                     {
                         sendFailStudentDetails[studentId] = ex.Message;
                         await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail, studentId, resource.username, 2, ex.Message);
+                        failCount++;
                         //message = ex.Message; // Store the error message
                         //_webEvent.WriteLogException(resource.username, message.Trim(), ex, pathBase); // Log exception
                     }
                 }
+                
 
                 // Set success flag if there are no failures
                 if (sendFailStudentDetails.Count > 0)
@@ -158,6 +163,29 @@ namespace ScoreManagement.Controllers
                     isSuccess = true;
                     message = "Emails sent successfully";
                 }
+
+                var data = new
+                {
+                    subject_id = resource.SubjectDetail.subject_id,
+                    total = resource.student_id.Count,
+                    success = successCount,
+                    fail = failCount,
+                };
+                var notifyResource = new NotificationResource
+                {
+                    templateId = 1,
+                    data = JsonConvert.SerializeObject(data),
+                    username = resource.username,
+                };
+
+                int notifyId = await _studentScoreQuery.InsertNotification(notifyResource);
+                if (notifyId != 0)
+                {
+                    var notifyResponse = await _studentScoreQuery.GetLatestNotification(notifyId);
+                    await _notifyHub.Clients.Group(resource.username).SendAsync("ReceiveNotification", JsonConvert.SerializeObject(notifyResponse));
+                }
+
+
             }
             catch (Exception ex)
             {

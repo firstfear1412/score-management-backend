@@ -1,44 +1,55 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using ScoreManagement.Hubs;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ScoreManagement.Controllers.Base;
+using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 
 namespace ScoreManagement.Controllers
 {
-    public class NotificationController : Controller
+    [Authorize]
+    [Route("api/[controller]")]
+    [ApiController]
+    public class NotificationController : BaseController
     {
-        private readonly INotificationHub _notificationHub;
+        private readonly INotificationQuery _notificationQuery;
 
-        public NotificationController(INotificationHub notificationHub)
+        public NotificationController(INotificationQuery notificationQuery)
         {
-            _notificationHub = notificationHub;
+            _notificationQuery = notificationQuery;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> SendNotification(string userName, string message)
+        [HttpGet("GetNotify/{username}")]
+        public async Task<IActionResult> GetNotifications(string username)
         {
-            if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(message))
+            HttpContext pathBase = HttpContext;
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<NotificationResponse<string>> notifications = new List<NotificationResponse<string>>();
+            try
             {
-                return BadRequest("User name or message cannot be empty.");
+                if (string.IsNullOrEmpty(username))
+                {
+                    return StatusCode(400, new
+                    {
+                        isSuccess = isSuccess,
+                        message = "username is required"
+                    });
+                }
+                // Send notification using the service (which could be NotificationHub)
+                notifications = await _notificationQuery.GetNotifications(username);
+                isSuccess = true;
             }
-
-            // Send notification using the service (which could be NotificationHub)
-            await _notificationHub.SendNotifyToUser(userName, message);
-
-            return Ok("Notification sent successfully.");
+            catch(Exception ex)
+            {
+                message = ex.Message;
+                _webEvent.WriteLogException(username, message, ex, pathBase);
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: notifications
+            );
+            return StatusCode(200,response);
         }
-        //private readonly IHubContext<NotificationHub> _hubContext;
-
-        //public NotificationController(IHubContext<NotificationHub> hubContext)
-        //{
-        //    _hubContext = hubContext;
-        //}
-
-        //[HttpPost("send")]
-        //public async Task<IActionResult> SendNotification([FromBody] NotificationResource request)
-        //{
-        //    await _hubContext.Clients.User(request.User).SendAsync("ReceiveNotification", request.Message);
-        //    return Ok(new { Message = "Notification sent successfully!" });
-        //}
     }
 }
