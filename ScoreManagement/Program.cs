@@ -14,6 +14,9 @@ using System.Text;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Query;
 using ScoreManagement.Services.Mail;
+using ScoreManagement.Interfaces.Dashboard;
+using ScoreManagement.Model.ScoreAnnoucement;
+using ScoreManagement.Query.Dashboard;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -126,6 +129,7 @@ builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
 builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
+builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 

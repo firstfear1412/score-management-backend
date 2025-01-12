@@ -2,6 +2,7 @@
 {
     public class ScoreAnnoucementResource
     {
+
         public int? sys_subject_no { get; set; }
         public string? subject_id { get; set; }
         public string? academic_year { get; set; }
@@ -29,5 +30,14 @@
         public string? subjectSearch { get; set; }
         public string? major_code { get; set; }
 
+    }
+
+    public class ScoreAnnoucementDashboard
+    {
+        public string? sys_subject_no { get; set; }
+        public string? subject_name { get; set; }
+        public string? academic_year { get; set; }
+        public string? semester { get; set; }
+        public string? section { get; set; }
     }
 }
