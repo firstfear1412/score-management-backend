@@ -1,8 +1,15 @@
-﻿namespace ScoreManagement.Model
+﻿using NPOI.SS.Formula.Functions;
+
+namespace ScoreManagement.Model
 {
     public class NotificationResource
     {
-        public string User { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
+        public int notificationId { get; set; }
+
+        public int templateId { get; set; }
+
+        public string? data { get; set; }
+
+        public string? username { get; set; }
     }
 }

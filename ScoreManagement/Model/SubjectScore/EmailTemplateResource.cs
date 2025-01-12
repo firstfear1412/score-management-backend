@@ -1,4 +1,4 @@
-﻿namespace ScoreManagement.Model.SubjectScore
+﻿namespace ScoreManagement.Model
 {
     public class EmailTemplateResource
     {

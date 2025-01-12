@@ -1,6 +1,5 @@
 ﻿using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
-using ScoreManagement.Model.SubjectScore;
 using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Interfaces
@@ -17,5 +16,7 @@ namespace ScoreManagement.Interfaces
         Task<bool> UpdateSendEmail(SubjectDetail resource, string studentId, string username, int send_status, string send_desc = "");
         Task<string> GetEmailStudent(string student_id);
         Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByConditionQuery(ScoreAnnoucementResource resource);
+        Task<int> InsertNotification(NotificationResource resource);
+        Task<NotificationResponse<string>> GetLatestNotification(int notificationId);
     }
 }

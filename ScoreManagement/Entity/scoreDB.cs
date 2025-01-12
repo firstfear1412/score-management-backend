@@ -23,6 +23,8 @@ namespace ScoreManagement.Entity
         public DbSet<UserDefaultEmailTemplate> UserDefaultEmailTemplates { get; set; }
         public DbSet<SubjectHeader> SubjectHeaders { get; set; }
         public DbSet<SubjectLecturer> SubjectLecturers { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationTemplate> NotificationTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -82,6 +84,14 @@ namespace ScoreManagement.Entity
                 .Entity<SubjectLecturer>()
                 .ToTable("SubjectLecturer")
                 .HasKey(a => new { a.row_id });
+            modelBuilder
+               .Entity<Notification>()
+               .ToTable("Notification")
+               .HasKey(a => new { a.notification_id });
+            modelBuilder
+               .Entity<NotificationTemplate>()
+               .ToTable("NotificationTemplate")
+               .HasKey(a => new { a.template_id });
         }
 
         public override int SaveChanges()

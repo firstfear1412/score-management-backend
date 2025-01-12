@@ -4,85 +4,48 @@ namespace ScoreManagement.Hubs
 {
     public class NotificationHub : Hub
     {
-        //public override async Task OnConnectedAsync()
-        //{
-        //    var username = Context.GetHttpContext()?.Request.Headers["username"].ToString();
-        //    if (!string.IsNullOrWhiteSpace(username))
-        //    {
-        //        Console.WriteLine($"User {username} connected.");
-        //    }
-        //    else
-        //    {
-        //        Console.WriteLine("Username is missing from headers.");
-        //    }
-        //    await base.OnConnectedAsync();
-        //}
-
-        //public async Task SendNotificationToUser(string user, string message)
-        //{
-        //    Console.WriteLine("Username is " + user + "message : " + message);
-        //    await Clients.User(user).SendAsync("ReceiveNotification", message);
-        //}
-
-        //public async Task BroadcastNotification(string message)
-        //{
-        //    await Clients.All.SendAsync("ReceiveNotification", message);
-        //}
-
         public override async Task OnConnectedAsync()
         {
-            var username = Context.GetHttpContext()?.Request.Headers["username"].ToString();
-            if (!string.IsNullOrWhiteSpace(username))
+            var username = Context.User?.Claims
+                .FirstOrDefault(c => c.Type == "username")?.Value;
+            if (!string.IsNullOrEmpty(username))
             {
-                // เพิ่ม User ไปยัง Connection Mapping
-                await Groups.AddToGroupAsync(Context.ConnectionId, username);
-                Console.WriteLine($"User {username} connected.");
-            }
-            else
-            {
-                Console.WriteLine("Username is missing from headers.");
+
+                    // เพิ่ม ConnectionId เข้ากลุ่มของ User
+                    await Groups.AddToGroupAsync(Context.ConnectionId, username);
+                    Console.WriteLine($"User {username} added to group with ConnectionId: {Context.ConnectionId}");
             }
 
             await base.OnConnectedAsync();
         }
 
+        // เรียกเมื่อผู้ใช้ตัดการเชื่อมต่อ
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var username = Context.GetHttpContext()?.Request.Headers["username"].ToString();
-            if (!string.IsNullOrWhiteSpace(username))
+            var username = Context.User?.Claims
+                .FirstOrDefault(c => c.Type == "username")?.Value;
+            if (!string.IsNullOrEmpty(username))
             {
-                // ลบ User ออกจาก Group
+                // ลบ ConnectionId ออกจากกลุ่มของ User
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, username);
-                Console.WriteLine($"User {username} disconnected.");
             }
+            Console.WriteLine($"User {username} removed from group.");
 
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SendNotificationToUser(string user)
+        // ส่งข้อความถึงผู้ใช้คนเดียว
+        public async Task SendNotifyToUser(string username, string message)
         {
-            // สร้าง mockup data
-            var mockNotifications = new List<string>
-            {
-                "This is your first notification",
-                "You have a new message",
-                "System update available",
-                "Reminder: Your meeting starts in 10 minutes"
-            };
-            // ส่ง notification ไปยังผู้ใช้
-            foreach (var notification in mockNotifications)
-            {
-                // ส่ง notification สำหรับผู้ใช้งานที่ระบุ
-                await Clients.User(user).SendAsync("ReceiveNotification", notification);
-            }
-            // ส่งข้อมูลให้ผู้ใช้งานคนที่ระบุเท่านั้น
-            //await Clients.User(user).SendAsync("ReceiveNotification", message);
+            Console.WriteLine($"user : {username} \n message : {message}");
+            await Clients.Group(username).SendAsync("ReceiveNotification", message);
         }
 
-        public async Task BroadcastNotification(string message)
+        // ส่งข้อความถึงทุกคน
+        public async Task SendNotifyToAll(string message)
         {
-            // ส่งข้อมูลให้ทุกคน
             await Clients.All.SendAsync("ReceiveNotification", message);
         }
+
     }
 }

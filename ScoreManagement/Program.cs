@@ -49,6 +49,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = configuration["JWT:Issuer"], // เปลี่ยนเป็น Audience ของคุณ
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:PrivateKey"]!)) // ใส่ Secret Key ที่ปลอดภัย
         };
+
+        // SignalR จะใช้ JWT token จาก query string หรือ header
+        //options.Events = new JwtBearerEvents
+        //{
+        //    OnAuthenticationFailed = context =>
+        //    {
+        //        Console.WriteLine("Authentication failed: " + context.Exception.Message);
+        //        return Task.CompletedTask;
+        //    },
+        //    OnTokenValidated = context =>
+        //    {
+        //        Console.WriteLine("Token validated.");
+        //        return Task.CompletedTask;
+        //    }
+        //};
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // ถ้าเชื่อมต่อผ่าน WebSocket หรือ SignalR, อ่าน token จาก query string
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -129,7 +157,6 @@ builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
 builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
-builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -163,13 +190,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();  // ตรวจสอบการยืนยันตัวตน
 app.UseAuthorization();
 
 // Use CORS policy
 app.UseCors("AllowSpecificOrigin");
 
 // Add signalIR Hub
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notifyHub");
 
 app.MapControllers();
 

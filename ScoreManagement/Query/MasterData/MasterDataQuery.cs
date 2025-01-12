@@ -75,5 +75,15 @@ namespace ScoreManagement.Query
                 })
                 .ToListAsync();
         }
+        public async Task<List<NotificationTemplateResponse>> GetNotifyTemplate()
+        {
+            return await _context.NotificationTemplates.Where(x => x.active_status == "active")
+                .Select(x => new NotificationTemplateResponse
+                {
+                    template_id = x.template_id,
+                    html_content = x.html_content,
+                })
+                .ToListAsync();
+        }
     }
 }

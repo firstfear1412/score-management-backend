@@ -1,24 +1,55 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using ScoreManagement.Hubs;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ScoreManagement.Controllers.Base;
+using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 
 namespace ScoreManagement.Controllers
 {
-    public class NotificationController : Controller
+    [Authorize]
+    [Route("api/[controller]")]
+    [ApiController]
+    public class NotificationController : BaseController
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly INotificationQuery _notificationQuery;
 
-        public NotificationController(IHubContext<NotificationHub> hubContext)
+        public NotificationController(INotificationQuery notificationQuery)
         {
-            _hubContext = hubContext;
+            _notificationQuery = notificationQuery;
         }
 
-        [HttpPost("send")]
-        public async Task<IActionResult> SendNotification([FromBody] NotificationResource request)
+        [HttpGet("GetNotify/{username}")]
+        public async Task<IActionResult> GetNotifications(string username)
         {
-            await _hubContext.Clients.User(request.User).SendAsync("ReceiveNotification", request.Message);
-            return Ok(new { Message = "Notification sent successfully!" });
+            HttpContext pathBase = HttpContext;
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<NotificationResponse<string>> notifications = new List<NotificationResponse<string>>();
+            try
+            {
+                if (string.IsNullOrEmpty(username))
+                {
+                    return StatusCode(400, new
+                    {
+                        isSuccess = isSuccess,
+                        message = "username is required"
+                    });
+                }
+                // Send notification using the service (which could be NotificationHub)
+                notifications = await _notificationQuery.GetNotifications(username);
+                isSuccess = true;
+            }
+            catch(Exception ex)
+            {
+                message = ex.Message;
+                _webEvent.WriteLogException(username, message, ex, pathBase);
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: notifications
+            );
+            return StatusCode(200,response);
         }
     }
 }
