@@ -159,6 +159,8 @@ builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
 builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
 //builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
+builder.Services.AddTransient<INotificationQuery, NotificationQuery>();
 
 builder.Services.AddDbContext<scoreDB>(options =>
 {
