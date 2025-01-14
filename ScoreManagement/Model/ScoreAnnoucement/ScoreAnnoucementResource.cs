@@ -34,10 +34,12 @@
 
     public class ScoreAnnoucementDashboard
     {
-        public string? sys_subject_no { get; set; }
+        //public string? subject_search { get; set; }
+        public string? subject_id {  get; set; }
         public string? subject_name { get; set; }
         public string? academic_year { get; set; }
         public string? semester { get; set; }
         public string? section { get; set; }
+        public string? score_type { get; set; }
     }
 }
