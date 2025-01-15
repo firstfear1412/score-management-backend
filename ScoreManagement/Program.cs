@@ -17,6 +17,8 @@ using ScoreManagement.Services.Mail;
 using ScoreManagement.Interfaces.Dashboard;
 using ScoreManagement.Model.ScoreAnnoucement;
 using ScoreManagement.Query.Dashboard;
+using ScoreManagement.Interfaces.ExcelScore;
+using ScoreManagement.Query.ExcelScore;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -161,6 +163,7 @@ builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
 builder.Services.AddTransient<INotificationQuery, NotificationQuery>();
+builder.Services.AddTransient<IExcelScore, ExcelScoreQuery>();
 
 builder.Services.AddDbContext<scoreDB>(options =>
 {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace ScoreManagement.Controllers
 {
+    //[Authorize]
     [AllowAnonymous]
     [Route("api/[controller]")]
     [ApiController]

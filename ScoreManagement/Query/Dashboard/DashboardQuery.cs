@@ -1,11 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
 using ScoreManagement.Interfaces.Dashboard;
 using ScoreManagement.Model.ScoreAnnoucement;
-using Microsoft.Extensions.Configuration;
-using ScoreManagement.Model;
-using System.Text.Json;
+
 using static DashboardStatisticsResponse;
-using Org.BouncyCastle.Crypto;
 
 namespace ScoreManagement.Query.Dashboard
 {
