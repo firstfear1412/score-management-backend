@@ -1,5 +1,5 @@
-﻿using ScoreManagement.Model.Table;
-using ScoreManagement.Model;
+﻿using ScoreManagement.Model;
+using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Interfaces
 {
@@ -7,6 +7,7 @@ namespace ScoreManagement.Interfaces
     {
         Task<User?> GetUser(UserResource resource);
         Task<User?> GetUserInfo(UserResource resource);
+        Task<bool> updateUserByConditionQuery(UserResource resource);
         Task<bool> UpdateUser(User resource, string query);
 
         Task<List<UserResource>> GetAllUsers();

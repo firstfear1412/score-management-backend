@@ -801,20 +801,18 @@ namespace ScoreManagement.Query
             }
             return flg;
         }
-
         public async Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByConditionQuery(ScoreAnnoucementResource resource)
         {
             var scoreAnnoucementList = new List<ScoreAnnoucementResource>();
 
             string query = @"
-        SELECT 
+        SELECT
+            ss.seat_no, 
             sh.sys_subject_no, 
             sh.subject_id, 
             sh.academic_year, 
             sh.semester, 
             sh.[section],
-            sl.teacher_code, 
-            sl.active_status AS lecturer_active_status, 
             ss.student_id,
             s.prefix as prefix_code,
             spp.byte_desc_th as prefix_desc_th,
@@ -822,7 +820,6 @@ namespace ScoreManagement.Query
             s.firstname,
             s.lastname,
             s.major_code,
-            ss.seat_no, 
             ss.accumulated_score, 
             ss.midterm_score, 
             ss.final_score, 
@@ -830,10 +827,16 @@ namespace ScoreManagement.Query
             sps.byte_desc_th as send_status_code_desc_th,
             sps.byte_desc_en as send_status_code_desc_en,
             ss.send_desc,
-            s.email 
+            s.email
         FROM SubjectHeader sh
-        LEFT JOIN SubjectLecturer sl
-            ON sh.sys_subject_no = sl.sys_subject_no
+        INNER JOIN (
+	        SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+	        FROM SubjectLecturer
+	        WHERE active_status = 'active'
+	        AND (@teacherCode IS NULL OR teacher_code = @teacherCode)
+	        GROUP BY sys_subject_no
+        ) sl
+        ON sh.sys_subject_no = sl.sys_subject_no
         LEFT JOIN SubjectScore ss
             ON sh.sys_subject_no = ss.sys_subject_no
         LEFT JOIN Student s
@@ -844,8 +847,6 @@ namespace ScoreManagement.Query
             ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
         LEFT JOIN SystemParam sps
             ON ss.send_status = sps.byte_code AND sps.byte_reference = 'send_status'
-        LEFT JOIN [User] u 
-            ON u.[role] IS NOT NULL
     ";
 
             // List to dynamically store conditions
@@ -894,7 +895,7 @@ namespace ScoreManagement.Query
             {
                 query += " WHERE " + string.Join(" AND ", conditions);
             }
-
+            query += " ORDER BY LEFT(ss.seat_no, PATINDEX('%[0-9]%', ss.seat_no + '0') - 1),TRY_CAST(SUBSTRING(ss.seat_no, PATINDEX('%[0-9]%', ss.seat_no + '0'), LEN(ss.seat_no)) AS INT)";
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -905,7 +906,7 @@ namespace ScoreManagement.Query
                     {
                         // Add parameters
                         command.Parameters.AddWithValue("@subjectSearch", (object)resource.subjectSearch ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@teacherCode", (object)resource.teacher_code ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@teacherCode", resource.role == 2 ? (object)resource.teacher_code : DBNull.Value);
                         command.Parameters.AddWithValue("@section", (object)resource.section ?? DBNull.Value);
                         command.Parameters.AddWithValue("@semester", (object)resource.semester ?? DBNull.Value);
                         command.Parameters.AddWithValue("@academic_year", (object)resource.academic_year ?? DBNull.Value);
@@ -923,8 +924,6 @@ namespace ScoreManagement.Query
                                     academic_year = reader["academic_year"]?.ToString(),
                                     semester = reader["semester"] as int? ?? default,
                                     section = reader["section"]?.ToString(),
-                                    teacher_code = reader["teacher_code"]?.ToString(),
-                                    lecturer_active_status = reader["lecturer_active_status"]?.ToString(),
                                     student_id = reader["student_id"]?.ToString(),
                                     prefix_code = reader["prefix_code"]?.ToString(),
                                     prefix_desc_th = reader["prefix_desc_th"]?.ToString(),
@@ -1008,7 +1007,7 @@ namespace ScoreManagement.Query
                         }
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     throw new Exception(ex.Message);
                 }

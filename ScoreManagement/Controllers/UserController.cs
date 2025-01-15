@@ -1,15 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
-using Org.BouncyCastle.Asn1.Cmp;
-using ScoreManagement.Common;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
-using ScoreManagement.Query;
 using ScoreManagement.Services.Encrypt;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -194,6 +190,95 @@ namespace ScoreManagement.Controllers
                 objectResponse: userInfo
             );
 
+            return StatusCode(200, response);
+        }
+
+
+        [AllowAnonymous]
+        [HttpPost("ChangePWD")]
+        public async Task<IActionResult> ChangePWDControllers([FromBody] UserResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? User = null;
+            bool isSuccess = false;
+            string sql = string.Empty;
+            string hashedPasswordBase64 = string.Empty;
+            try
+            {
+
+                if (!string.IsNullOrEmpty(resource.username) && !string.IsNullOrEmpty(resource.password))
+                {
+                    bool flg = false;
+                    var users = await _userQuery.GetUser(resource)!;
+                    if (users != null)
+                    {
+                        flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
+                        if (flg)
+                        {
+                            if (resource.newPassword == resource.conNewPassword)
+                            {
+                                resource.newPassword = _encryptService.EncryptPassword(resource.newPassword!);
+                                await _userQuery.updateUserByConditionQuery(resource)!;
+
+                                users.date_login = DateTime.Now;
+                                users.update_date = DateTime.Now;
+                                users.update_by = resource.update_by;
+                                users.total_failed = 0;
+                                sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed , [update_by] = @update_by";
+                                flg = await _userQuery.UpdateUser(users, sql);
+
+                                isSuccess = true;
+                                messageDesc = "Password has changed.";
+                            }
+                            else
+                            {
+                                messageKey = "login_failed";
+                                messageDesc = "The new password and confirmation password do not match. ";
+                            }
+
+                        }
+                        else
+                        {
+                            messageKey = "login_failed";
+                            messageDesc = "Invalid password.";
+
+                        }
+                    }
+                    else
+                    {
+                        messageKey = "login_user_not_found";
+                        messageDesc = "Invalid Username or password. Please try again or contact admin.";
+                    }
+
+                }
+                else
+                {
+                    //message = "input required";
+
+                    messageDesc = "field is required";
+                }
+
+                //_context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
+
+            if (!isSuccess)
+            {
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                tokenResult: User
+            );
             return StatusCode(200, response);
         }
 

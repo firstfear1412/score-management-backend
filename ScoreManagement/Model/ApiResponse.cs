@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.SignalR.Protocol;
-using Newtonsoft.Json;
-
-namespace ScoreManagement.Model
+﻿namespace ScoreManagement.Model
 {
     public class ApiResponse<T>
     {
         public bool IsSuccess { get; set; } = false;
+        public int ObjectCount { get; set; }
         public ApiMessage? Message { get; set; }
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public T? ObjectResponse { get; set; }

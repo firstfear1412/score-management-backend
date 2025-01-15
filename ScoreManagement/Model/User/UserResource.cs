@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace ScoreManagement.Model
+﻿namespace ScoreManagement.Model
 {
     public class UserResource
     {
@@ -37,6 +35,9 @@ namespace ScoreManagement.Model
         public string? prefix_description_en { get; set; }
         public string? role_description_th { get; set; }
         public string? role_description_en { get; set; }
+        public string? newPassword { get; set; }
+        public string? conNewPassword { get; set; }
+
 
     }
 }

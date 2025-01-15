@@ -9,7 +9,7 @@
         public int? semester { get; set; }
         public string? section { get; set; }
         public string? teacher_code { get; set; }
-        public string? lecturer_active_status { get; set; }
+        //public string? lecturer_active_status { get; set; }
         public string? student_id { get; set; }
         public string? prefix_code { get; set; }
         public string? prefix_desc_th { get; set; }
@@ -35,7 +35,7 @@
     public class ScoreAnnoucementDashboard
     {
         //public string? subject_search { get; set; }
-        public string? subject_id {  get; set; }
+        public string? subject_id { get; set; }
         public string? subject_name { get; set; }
         public string? academic_year { get; set; }
         public string? semester { get; set; }

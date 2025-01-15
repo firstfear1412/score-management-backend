@@ -158,6 +158,41 @@ namespace ScoreManagement.Query
             }
             return userInfo;
         }
+        public async Task<bool> updateUserByConditionQuery(UserResource resource)
+        {
+            bool flg = false;
+            int i = 0;
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlTransaction tran = conn.BeginTransaction();
+                string mainQuery = $@"
+                        UPDATE [User]
+                            SET [password] = @password
+                            WHERE username = @username
+                    ";
+                using (SqlCommand cmd = new SqlCommand(mainQuery, conn))
+                {
+
+                    cmd.Transaction = tran;
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.Add(new SqlParameter("@username", resource.username ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@password", resource.newPassword ?? (object)DBNull.Value));
+                    i = await cmd.ExecuteNonQueryAsync();
+                    flg = i == 0 ? false : true;
+                    if (flg)
+                    {
+                        tran.Commit();
+                    }
+                    else
+                    {
+                        tran.Rollback();
+                    }
+                }
+                conn.Close();
+            }
+            return flg;
+        }
 
         public async Task<List<UserResource>> GetAllUsers()
         {
