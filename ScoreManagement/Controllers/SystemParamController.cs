@@ -109,13 +109,10 @@ namespace ScoreManagement.Controllers
         {
             try
             {
-                // Call the InsertSystemParam method and capture both IsSuccess and Message
                 var result = await _systemParamQuery.InsertSystemParam(param);
 
-                // Check if the insert was successful or not
                 if (!result.IsSuccess)
                 {
-                    // Return BadRequest with the message if the insertion fails
                     return BadRequest(new
                     {
                         isSuccess = result.IsSuccess,
@@ -123,7 +120,6 @@ namespace ScoreManagement.Controllers
                     });
                 }
 
-                // Return Ok with the success message if the insertion is successful
                 return Ok(new
                 {
                     isSuccess = result.IsSuccess,
@@ -132,7 +128,6 @@ namespace ScoreManagement.Controllers
             }
             catch (Exception ex)
             {
-                // Return internal server error if an exception occurs
                 return StatusCode(500, new
                 {
                     isSuccess = false,

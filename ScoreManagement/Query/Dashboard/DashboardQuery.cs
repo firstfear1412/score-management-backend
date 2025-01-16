@@ -49,7 +49,7 @@ namespace ScoreManagement.Query.Dashboard
                         sec.byte_desc_th as section,
                         sh.active_status
                     from subjectheader sh
-                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'acedemic_year'
+                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'academic_year'
                     join systemparam sem on sh.semester = sem.byte_code and sem.byte_reference = 'semester'
                     join systemparam sec on sh.section = sec.byte_code and sec.byte_reference = 'section') shh,
                     (select subject_id, subject_name, active_status from subject
@@ -86,7 +86,7 @@ namespace ScoreManagement.Query.Dashboard
                         sec.byte_desc_th as section,
                         sh.active_status
                     from subjectheader sh
-                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'acedemic_year'
+                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'academic_year'
                     join systemparam sem on sh.semester = sem.byte_code and sem.byte_reference = 'semester'
                     join systemparam sec on sh.section = sec.byte_code and sec.byte_reference = 'section') shh,
                     (select subject_id, subject_name, active_status from subject
@@ -123,7 +123,7 @@ namespace ScoreManagement.Query.Dashboard
                         sec.byte_desc_th as section,
                         sh.active_status
                     from subjectheader sh
-                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'acedemic_year'
+                    join systemparam yrs on sh.academic_year = yrs.byte_code and yrs.byte_reference = 'academic_year'
                     join systemparam sem on sh.semester = sem.byte_code and sem.byte_reference = 'semester'
                     join systemparam sec on sh.section = sec.byte_code and sec.byte_reference = 'section') shh,
                     (select subject_id, subject_name, active_status from subject
@@ -158,7 +158,7 @@ namespace ScoreManagement.Query.Dashboard
                         sec.byte_desc_th AS section,
                         sh.active_status
                     FROM SubjectHeader sh
-                    JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'acedemic_year'
+                    JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
                     JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
                     JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh,
                     (SELECT subject_id, subject_name, active_status FROM Subject
@@ -200,7 +200,7 @@ namespace ScoreManagement.Query.Dashboard
                                         sec.byte_desc_th AS section,
                                         sh.active_status
                                     FROM SubjectHeader sh
-                                    JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'acedemic_year'
+                                    JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
                                     JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
                                     JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh
                                     ON ss.sys_subject_no = shh.sys_subject_no
@@ -246,6 +246,7 @@ namespace ScoreManagement.Query.Dashboard
                                 {
                                     responseList.Add(new
                                     {
+
                                         total_score = new DashboardTotalScore
                                         {
                                             MaxTotalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),

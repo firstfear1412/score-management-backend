@@ -79,7 +79,7 @@ namespace ScoreManagement.Query.ExcelScore
                                             sem.byte_desc_th AS semester, 
                                             sec.byte_desc_th AS section
                                         FROM SubjectHeader sh
-                                        JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'acedemic_year'
+                                        JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
                                         JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
                                         JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh
                                         ON ss.sys_subject_no = shh.sys_subject_no
