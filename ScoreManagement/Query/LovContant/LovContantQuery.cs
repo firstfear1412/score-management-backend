@@ -69,7 +69,7 @@ namespace ScoreManagement.Query
 
         // Method to fetch 'acedemic_year'
         public Task<List<LovContantsResource>> GetLovAcedemicYearQuery() =>
-            GetLovQuery("acedemic_year");
+            GetLovQuery("academic_year");
 
         // Method to fetch 'score_type'
         public Task<List<LovContantsResource>> GetLovScoreTypeQuery() =>

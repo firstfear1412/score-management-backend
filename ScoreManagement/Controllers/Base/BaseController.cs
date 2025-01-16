@@ -13,15 +13,9 @@ namespace ScoreManagement.Controllers.Base
         }
         protected ApiResponse<T> ApiResponse<T>(bool isSuccess, string messageKey = "", string messageDescription = "", T? objectResponse = default, T? parameter = default, T? tokenResult = default)
         {
-            int objectCount = 0;
-            if (objectResponse is IEnumerable<object> collection)
-            {
-                objectCount = collection.Count();
-            }
             return new ApiResponse<T>
             {
                 IsSuccess = isSuccess,
-                ObjectCount = objectCount,
                 Message = new ApiMessage
                 {
                     MessageKey = messageKey,
