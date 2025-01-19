@@ -85,5 +85,15 @@ namespace ScoreManagement.Query
                 })
                 .ToListAsync();
         }
+        public async Task<List<TeacherResponse>> GetTeacher()
+        {
+            return await _context.Users.Where(x => x.active_status == "active" && x.role == 2)
+                .Select(x => new TeacherResponse
+                {
+                    TeacherCode = x.teacher_code,
+                    TeacherName = $"{x.firstname} {x.lastname}",
+                })
+                .ToListAsync();
+        }
     }
 }

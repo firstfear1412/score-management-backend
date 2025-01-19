@@ -249,5 +249,36 @@ namespace ScoreManagement.Controllers
             );
             return StatusCode(200, response);
         }
+
+        [HttpGet("Teacher")]
+        public async Task<IActionResult> GetTeacher()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<TeacherResponse> teachers = new List<TeacherResponse>();
+            try
+            {
+                teachers = await _masterDataQuery.GetTeacher();
+                if (teachers.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: teachers
+            );
+            return StatusCode(200, response);
+        }
     }
 }

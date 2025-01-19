@@ -12,5 +12,6 @@ namespace ScoreManagement.Interfaces
         Task<Dictionary<string,int?>> GetDefaultEmailTemplate(string username);
         Task<List<SubjectResponse>> GetSubject();
         Task<List<NotificationTemplateResponse>> GetNotifyTemplate();
+        Task<List<TeacherResponse>> GetTeacher();
     }
 }

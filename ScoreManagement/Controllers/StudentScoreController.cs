@@ -43,6 +43,9 @@ namespace ScoreManagement.Controllers
             HttpContext pathBase = HttpContext;
             bool isSuccess = false;
             string message = string.Empty;
+            string messageKey = string.Empty;
+            var parameter = new Dictionary<string, string>();
+            List<string> failedStudentIds = new List<string>();
             try
             {
                 if (resource == null || resource.data == null)
@@ -53,35 +56,67 @@ namespace ScoreManagement.Controllers
                         message = "resource is required"
                     });
                 }
-                foreach (var student in resource.data)
+                //foreach (var student in resource.data)
+                //{
+                //var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
+                ////var result = true;
+
+                //if (!result)
+                //{
+                //    message = $"Failed to upload score for student ID: {student.student_id}";
+                //    break; // ออกจากลูปเมื่อพบความล้มเหลว
+                //}
+                //else
+                //{
+                //    isSuccess = true;
+                //}
+                //}
+
+                //if (isSuccess)
+                //{
+                //    message = $"All student scores uploaded successfully.";
+                //}
+
+                //this code improve optimize from 30s to 6s when query 50 item
+                var tasks = resource.data.Select(async student =>
                 {
                     var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
-                    //var result = true;
-
                     if (!result)
                     {
-                        message = $"Failed to upload score for student ID: {student.student_id}";
-                        break; // ออกจากลูปเมื่อพบความล้มเหลว
+                        failedStudentIds.Add(student.student_id);
                     }
-                    else
-                    {
-                        isSuccess = true;
-                    }
-                }
-                if (isSuccess)
-                {
-                    message = $"All student scores uploaded successfully.";
-                }
+                    return result;
+                });
 
+                await Task.WhenAll(tasks);
+
+                if(failedStudentIds.Count == 0)
+                {
+                    isSuccess = true;
+                    message = "All student scores uploaded successfully.";
+                }
+                else
+                {
+                    isSuccess = false;
+                    string failedIds = string.Join(", ", failedStudentIds);
+                    message = $"Failed to upload scores for the following students: {failedIds}";
+                    messageKey = "uploadScore_error_uploadSomeStudentFailed"; // มีข้อผิดพลาดในการอัปโหลดคะแนนสำหรับนักเรียนดังต่อไปนี้:
+                    parameter = new Dictionary<string, string>
+                    {
+                        { "studentId_List", failedIds }
+                    };
+                }
             }
             catch (Exception ex)
             {
                 message = ex.Message;
                 _webEvent.WriteLogException(resource.username, message.Trim(), ex, pathBase);
             }
-            var response = ApiResponse<string>(
+            var response = ApiResponse<Dictionary<string, string>>(
                 isSuccess: isSuccess,
-                messageDescription: message
+                messageKey: messageKey,
+                messageDescription: message,
+                parameter: parameter
             );
             return StatusCode(200, response);
         }

@@ -13,7 +13,7 @@ namespace ScoreManagement.Model.Table
 
         public int? role { get; set; }
 
-        public string? teacher_code { get; set; }
+        public string teacher_code { get; set; } = string.Empty;
 
         public string? prefix { get; set; }
 

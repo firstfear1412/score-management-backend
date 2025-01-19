@@ -440,6 +440,11 @@ namespace ScoreManagement.Query
         }
         public async Task<bool> UploadStudentScore(SubjectDetailUpload subject, ScoreStudent student, string username)
         {
+            // จำลองว่าถ้า student_id เป็น "12345" จะล้มเหลว
+            if (student.student_id == "6430250041" || student.student_id == "6430250042")
+            {
+                return false; // คืนค่า false เพื่อให้การอัปโหลดล้มเหลว
+            }
             bool flg = false;
             int i = 0;
             using (var connection = new SqlConnection(_connectionString))
