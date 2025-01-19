@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
@@ -92,10 +93,11 @@ namespace ScoreManagement.Query
             return user;
         }
 
-        public async Task<User?> GetUserInfo(UserResource resource)
-        {
-            User? userInfo = null;
-            string query = @"
+        public async Task<User?> GetUserInfo(UserResource resource) {
+            try {
+                {
+                    User? userInfo = null;
+                    string query = @"
                     SELECT
                              u.[username],
                              u.[email],
@@ -117,47 +119,54 @@ namespace ScoreManagement.Query
                          AND u.active_status = 'active';
                ";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-
-                using (SqlCommand command = new SqlCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@username", resource.username);
-
-                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                    using (SqlConnection connection = new SqlConnection(_connectionString))
                     {
-                        if (reader.HasRows)
+                        await connection.OpenAsync();
+
+                        using (SqlCommand command = new SqlCommand(query, connection))
                         {
-                            if (reader.Read())
+                            command.Parameters.AddWithValue("@username", resource.username);
+
+                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
                             {
-                                int col = 0;
-                                int colNull = 0;
-                                User result = new User();
+                                if (reader.HasRows)
+                                {
+                                    if (reader.Read())
+                                    {
+                                        int col = 0;
+                                        int colNull = 0;
+                                        User result = new User();
 
-                                result.username = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.teacher_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.prefix_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.prefix_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.role = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
-                                result.role_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
-                                result.role_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.username = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.email = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.teacher_code = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.prefix_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.prefix_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.firstname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.lastname = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.active_status = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.role = !reader.IsDBNull(colNull++) ? reader.GetInt32(col) : default; col++;
+                                        result.role_description_th = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                                        result.role_description_en = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
 
-                                col = 0;
-                                colNull = 0;
-                                userInfo = result;
+                                        col = 0;
+                                        colNull = 0;
+                                        userInfo = result;
+                                    }
+                                }
                             }
                         }
+                        await connection.CloseAsync();
                     }
+                    return userInfo;
                 }
-                await connection.CloseAsync();
             }
-            return userInfo;
+            catch (Exception ex)
+            {
+                throw new Exception("Error insert data.", ex);
+            }
         }
+
         public async Task<bool> updateUserByConditionQuery(UserResource resource)
         {
             bool flg = false;
@@ -265,16 +274,32 @@ namespace ScoreManagement.Query
 
         public async Task<bool> CheckEmailExist(string email)
         {
-            const string query = @"SELECT COUNT(1) FROM [User] WHERE email = @Email";
+            const string query_Email = @"SELECT COUNT(1) FROM [User] WHERE email = @Email";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                using (SqlCommand command = new SqlCommand(query, connection))
+                using (SqlCommand command = new SqlCommand(query_Email, connection))
                 {
                     command.Parameters.AddWithValue("@Email", email);
                     var result = await command.ExecuteScalarAsync();
                     return Convert.ToInt32(result) > 0; // ถ้ามีอีเมลอยู่แล้ว, คืนค่า true
+                }
+            }
+        }
+
+        public async Task<bool> CheckTeacherCodeExist(string teacher_code)
+        {
+            const string query_TeacherCode = @"SELECT COUNT(1) FROM [User] WHERE teacher_code = @TeacherCode";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (SqlCommand command = new SqlCommand(query_TeacherCode, connection))
+                {
+                    command.Parameters.AddWithValue("@TeacherCode", teacher_code);
+                    var result = await command.ExecuteScalarAsync();
+                    return Convert.ToInt32(result) > 0;
                 }
             }
         }

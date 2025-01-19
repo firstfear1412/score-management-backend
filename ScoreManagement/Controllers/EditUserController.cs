@@ -57,7 +57,6 @@ namespace ScoreManagement.Controllers
         [HttpPost("InsertUser")]
         public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources, [FromQuery] string language = "th")
         {
-            // Default to 'th' if language is not provided
             language = string.IsNullOrEmpty(language) ? "th" : language.ToLower();
 
             if (!ModelState.IsValid)
@@ -72,28 +71,26 @@ namespace ScoreManagement.Controllers
 
             try
             {
-                // Check for duplicate emails in the input list
-                var duplicateEmails = resources
-                    .GroupBy(r => r.email)
-                    .Where(g => g.Count() > 1)
-                    .Select(g => g.Key)
-                    .ToList();
+                //var duplicateEmails = resources
+                //    .GroupBy(r => r.email)
+                //    .Where(g => g.Count() > 1)
+                //    .Select(g => g.Key)
+                //    .ToList();
 
-                if (duplicateEmails.Any())
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = new { th = "พบอีเมลที่ซ้ำกัน", en = "Duplicate emails found in the input data." },
-                        errors = duplicateEmails.Select(email => new
-                        {
-                            th = $"อีเมล {email} ซ้ำกัน",
-                            en = $"Email {email} is duplicated in the input data."
-                        })
-                    });
-                }
+                //if (duplicateEmails.Any())
+                //{
+                //    return BadRequest(new
+                //    {
+                //        success = false,
+                //        message = new { th = "พบอีเมลที่ซ้ำกัน", en = "Duplicate emails found in the input data." },
+                //        errors = duplicateEmails.Select(email => new
+                //        {
+                //            th = $"อีเมล {email} ซ้ำกัน",
+                //            en = $"Email {email} is duplicated in the input data."
+                //        })
+                //    });
+                //}
 
-                // Check for duplicate emails in the database
                 var existingEmails = new List<string>();
                 foreach (var resource in resources)
                 {
@@ -111,8 +108,31 @@ namespace ScoreManagement.Controllers
                         message = language == "th" ? "มีอีเมลบางรายการที่ใช้งานแล้ว" : "Some emails are already in use.",
                         errors = existingEmails.Select(email => new
                         {
-                            th = $"อีเมล {email} ถูกใช้งานแล้วในระบบ",
+                            th = $"{email}",
                             en = $"Email {email} already exists in the system."
+                        }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
+                    });
+                }
+
+                var existingTeacherCode = new List<string>();
+                foreach (var resource in resources)
+                {
+                    if (await _userQuery.CheckTeacherCodeExist(resource.teacher_code))
+                    {
+                        existingTeacherCode.Add(resource.teacher_code);
+                    }
+                }
+
+                if (existingTeacherCode.Any())
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = language == "th" ? "มีรหัสอาจารย์ถูกใช้งานแล้ว" : "Some TeacherCode are already in use.",
+                        errors = existingTeacherCode.Select(teacher_code => new
+                        {
+                            th = $"{teacher_code}",
+                            en = $"{teacher_code}"
                         }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
                     });
                 }
@@ -158,6 +178,7 @@ namespace ScoreManagement.Controllers
             {
                 resource.password = _encryptService.EncryptPassword(resource.password);
                 resource.update_date = DateTime.Now;
+
                 // สร้าง query string แบบ dynamic โดยระบุเฉพาะฟิลด์ที่มีค่า
                 var queryBuilder = new List<string>();
 

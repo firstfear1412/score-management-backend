@@ -16,6 +16,8 @@ namespace ScoreManagement.Interfaces
 
         Task<bool> CheckEmailExist(string email);
 
+        Task<bool> CheckTeacherCodeExist(string teacher_code);
+
         Task<bool> UpdateUserById(UserResource resource, string query);
     }
 }
