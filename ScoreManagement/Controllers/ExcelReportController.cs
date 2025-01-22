@@ -6,8 +6,8 @@ using ScoreManagement.Model.ExcelScore;
 
 namespace ScoreManagement.Controllers
 {
-    //[Authorize]
-    [AllowAnonymous]
+    [Authorize]
+    //[AllowAnonymous]
     [ApiController]
     [Route("api/ExcelCreate")]
     public class ExcelReportController : Controller
