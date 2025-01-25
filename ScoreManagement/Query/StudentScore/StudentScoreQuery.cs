@@ -454,6 +454,7 @@ namespace ScoreManagement.Query
                 {
                     try
                     {
+                        // TABLE : Subject
                         string checkSubjectQuery = @"
                             SELECT COUNT(*)
                             FROM Subject
@@ -504,6 +505,8 @@ namespace ScoreManagement.Query
                                 }
                             }
                         }
+
+                        // TABLE : SubjectHeader
                         int? sysSubjectNo = null;
                         string checkSubjectHeaderQuery = @"
                             SELECT sh.[sys_subject_no]
@@ -574,19 +577,46 @@ namespace ScoreManagement.Query
                                 }
                             }
                         }
-                        string checkSubjectLecturerQuery = @"
-                            SELECT COUNT(*)
+                        #region new code
+                        // TABLE : SubjectLecturer
+                        // Step 1: SELECT teacher_code ของ sys_subject_no
+                        var existingTeachers = new List<string>();
+                        string existingTeachersQuery = @"
+                            SELECT teacher_code
                             FROM SubjectLecturer
                             WHERE [sys_subject_no] = @sys_subject_no;
                         ";
-                        using (var checkSubjectLecturerCommand = new SqlCommand(checkSubjectLecturerQuery, connection, transaction))
+                        using (var existingTeachersCommand = new SqlCommand(existingTeachersQuery, connection, transaction))
                         {
-                            checkSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
-                            int countSubjectLecturer = (int)await checkSubjectLecturerCommand.ExecuteScalarAsync();
-                            if (countSubjectLecturer == 0)
+                            existingTeachersCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                            using (var reader = await existingTeachersCommand.ExecuteReaderAsync())
                             {
-                                string insertSubjectHeaderQuery = @"
-                                    INSERT INTO SubjectLecturer(
+                                while (await reader.ReadAsync())
+                                {
+                                    int col = 0;
+                                    existingTeachers.Add(reader.IsDBNull(col) ? null : reader.GetString(col++));
+                                }
+                            }
+                        }
+                        // Step 2: UPDATE active_status เป็น inactive สำหรับ sys_subject_no
+                        string updateSubjectLecturerQuery = @"
+                            UPDATE SubjectLecturer
+                            SET active_status = 'inactive'
+                            WHERE sys_subject_no = @sys_subject_no
+                        ";
+                        using (var updateSubjectLecturerCommand = new SqlCommand(updateSubjectLecturerQuery, connection, transaction))
+                        {
+                            updateSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                            i = await updateSubjectLecturerCommand.ExecuteNonQueryAsync();
+                            flg = i > 0;
+                            if (!flg)
+                            {
+                                throw new Exception("Failed to update SubjectLecturer for old teacher_code");
+                            }
+                        }
+                        // Step 3: INSERT ค่า teacher_code ใหม่ที่ยังไม่มี
+                        string insertSubjectLecturerQuery = @"
+                            INSERT INTO SubjectLecturer(
                                         [sys_subject_no]
                                         ,[teacher_code]
                                         ,[active_status]
@@ -605,29 +635,109 @@ namespace ScoreManagement.Query
                                         GETDATE(),  
                                         @username
                                     );
-                                ";
-                                foreach (var teacherCode in subject.teacher)
-                                {
-                                    using (var insertSubjectHeaderCommand = new SqlCommand(insertSubjectHeaderQuery, connection, transaction))
-                                    {
-                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
-                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@teacher_code", teacherCode);
-                                        insertSubjectHeaderCommand.Parameters.AddWithValue("@username", username);
+                        ";
 
-                                        i = await insertSubjectHeaderCommand.ExecuteNonQueryAsync();
-                                        flg = i > 0;
-                                        if (!flg)
-                                        {
-                                            throw new Exception("Failed to insert into SubjectLecturer");
-                                        }
+                        string updateExistingSubjectLecturerQuery = @"
+                                    UPDATE SubjectLecturer
+                                    SET active_status = 'active'
+                                    WHERE sys_subject_no = @sys_subject_no
+                                        AND teacher_code = @teacher_code
+                                        AND teacher_code = @teacher_code
+                                ";
+
+                        foreach (var teacherCode in subject.teacher)
+                        {
+                            if (!existingTeachers.Contains(teacherCode))
+                            {
+                                using (var insertSubjectHeaderCommand = new SqlCommand(insertSubjectLecturerQuery, connection, transaction))
+                                {
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@teacher_code", teacherCode);
+                                    insertSubjectHeaderCommand.Parameters.AddWithValue("@username", username);
+
+                                    i = await insertSubjectHeaderCommand.ExecuteNonQueryAsync();
+                                    flg = i > 0;
+                                    if (!flg)
+                                    {
+                                        throw new Exception("Failed to insert into SubjectLecturer for teacher_code '{teacherCode}'.");
                                     }
                                 }
                             }
                             else
                             {
-
+                                
+                                using (var updateExistingSubjectLecturerCommand = new SqlCommand(updateExistingSubjectLecturerQuery, connection, transaction))
+                                {
+                                    updateExistingSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                    updateExistingSubjectLecturerCommand.Parameters.AddWithValue("@teacher_code", teacherCode);
+                                    i = await updateExistingSubjectLecturerCommand.ExecuteNonQueryAsync();
+                                    flg = i > 0;
+                                    if (!flg)
+                                    {
+                                        throw new Exception("Failed to update SubjectLecturer for teacher_code '{teacherCode}' to 'active'.");
+                                    }
+                                }
                             }
                         }
+
+                        #endregion new code
+                        #region old code
+                        //string checkSubjectLecturerQuery = @"
+                        //    SELECT COUNT(*)
+                        //    FROM SubjectLecturer
+                        //    WHERE [sys_subject_no] = @sys_subject_no;
+                        //";
+                        //using (var checkSubjectLecturerCommand = new SqlCommand(checkSubjectLecturerQuery, connection, transaction))
+                        //{
+                        //    checkSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                        //    int countSubjectLecturer = (int)await checkSubjectLecturerCommand.ExecuteScalarAsync();
+                        //    if (countSubjectLecturer == 0)
+                        //    {
+                        //        string insertSubjectHeaderQuery = @"
+                        //            INSERT INTO SubjectLecturer(
+                        //                [sys_subject_no]
+                        //                ,[teacher_code]
+                        //                ,[active_status]
+                        //                ,[create_date]
+                        //                ,[create_by]
+                        //                ,[update_date]
+                        //                ,[update_by] 
+                        //            )  
+                        //            VALUES  
+                        //            (  
+                        //                @sys_subject_no,
+                        //                @teacher_code,
+                        //                'active',
+                        //                GETDATE(),  
+                        //                @username,  
+                        //                GETDATE(),  
+                        //                @username
+                        //            );
+                        //        ";
+                        //        foreach (var teacherCode in subject.teacher)
+                        //        {
+                        //            using (var insertSubjectHeaderCommand = new SqlCommand(insertSubjectHeaderQuery, connection, transaction))
+                        //            {
+                        //                insertSubjectHeaderCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                        //                insertSubjectHeaderCommand.Parameters.AddWithValue("@teacher_code", teacherCode);
+                        //                insertSubjectHeaderCommand.Parameters.AddWithValue("@username", username);
+
+                        //                i = await insertSubjectHeaderCommand.ExecuteNonQueryAsync();
+                        //                flg = i > 0;
+                        //                if (!flg)
+                        //                {
+                        //                    throw new Exception("Failed to insert into SubjectLecturer");
+                        //                }
+                        //            }
+                        //        }
+                        //    }
+                        //    else
+                        //    {
+
+                        //    }
+                        //}
+                        #endregion old code
+                        // TABLE : Student
                         string checkStudentQuery = @"
                             SELECT COUNT(*)
                             FROM Student
@@ -692,6 +802,7 @@ namespace ScoreManagement.Query
                             }
                         }
 
+                        // TABLE : SubjectScore
                         string checkSubjectScoreQuery = @"
                             SELECT COUNT(*)
                             FROM SubjectScore
