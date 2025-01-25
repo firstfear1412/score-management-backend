@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using ScoreManagement.Interfaces.ExcelScore;
 using ScoreManagement.Helpers;
 using ScoreManagement.Model.ExcelScore;
+using ScoreManagement.Controllers.Base;
 
 namespace ScoreManagement.Controllers
 {
@@ -10,7 +11,7 @@ namespace ScoreManagement.Controllers
     //[AllowAnonymous]
     [ApiController]
     [Route("api/ExcelCreate")]
-    public class ExcelReportController : Controller
+    public class ExcelReportController : BaseController
     {
         private readonly IExcelScore _excel_score;
 

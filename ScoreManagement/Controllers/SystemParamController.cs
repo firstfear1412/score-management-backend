@@ -86,10 +86,10 @@ namespace ScoreManagement.Controllers
 
                 bool isUpdated = await _systemParamQuery.UpdateSystemParam(updateRequest);
 
-                if (!isUpdated)
-                {
-                    return BadRequest(new { isSuccess = false, message = "Duplicate description found." });
-                }
+                //if (!isUpdated)
+                //{
+                //    return BadRequest(new { isSuccess = false, message = "Duplicate description found." });
+                //}
 
                 return Ok(new { isSuccess = true, message = "Record updated successfully." });
             }
