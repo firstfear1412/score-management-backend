@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using ScoreManagement.Services.Encrypt;
-//using Newtonsoft.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using ScoreManagement.Hubs;
@@ -15,10 +14,10 @@ using ScoreManagement.Interfaces;
 using ScoreManagement.Query;
 using ScoreManagement.Services.Mail;
 using ScoreManagement.Interfaces.Dashboard;
-using ScoreManagement.Model.ScoreAnnoucement;
 using ScoreManagement.Query.Dashboard;
 using ScoreManagement.Interfaces.ExcelScore;
 using ScoreManagement.Query.ExcelScore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -53,19 +52,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
 
         // SignalR จะใช้ JWT token จาก query string หรือ header
-        //options.Events = new JwtBearerEvents
-        //{
-        //    OnAuthenticationFailed = context =>
-        //    {
-        //        Console.WriteLine("Authentication failed: " + context.Exception.Message);
-        //        return Task.CompletedTask;
-        //    },
-        //    OnTokenValidated = context =>
-        //    {
-        //        Console.WriteLine("Token validated.");
-        //        return Task.CompletedTask;
-        //    }
-        //};
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -77,11 +63,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     context.Token = accessToken;
                 }
                 return Task.CompletedTask;
-            }
+            },
+            //OnAuthenticationFailed = context =>
+            //{
+            //    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+            //    return Task.CompletedTask;
+            //},
+            //OnTokenValidated = context =>
+            //{
+            //    var claims = context.Principal.Claims.ToList();
+            //    Console.WriteLine($"Token validated successfully. Claims: {string.Join(", ", claims.Select(c => $"{c.Type}: {c.Value}"))}");
+            //    return Task.CompletedTask;
+            //},
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Custom policy สำหรับ role 1 (Admin)
+    options.AddPolicy("Admin", policy =>
+        policy.RequireClaim(ClaimTypes.Role, "1")); // mapping "role" -> ClaimTypes.Role อัตโนมัติ
+
+    // Custom policy สำหรับ role 2 (User)
+    options.AddPolicy("User", policy =>
+        policy.RequireClaim(ClaimTypes.Role, "2"));
+});
 
 // Add services to the container.
 builder.Services.AddSignalR();
@@ -95,11 +101,11 @@ builder.Services.AddControllers()
     //{
     //    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     //})
-    ;
+;
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
+
 // Add Swagger services with customized schema IDs
 builder.Services.AddSwaggerGen(c =>
 {
@@ -130,19 +136,19 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
                 {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[]{}
-                    }
-                });
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
     // Map IFormFile to a Swagger file schema
     c.MapType<IFormFile>(() => new Microsoft.OpenApi.Models.OpenApiSchema
     {
@@ -159,7 +165,6 @@ builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
 builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
-//builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
 builder.Services.AddTransient<INotificationQuery, NotificationQuery>();

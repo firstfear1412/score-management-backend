@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace ScoreManagement.Controllers
 {
     //[AllowAnonymous]
-    [Authorize]
+    [Authorize(Policy = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class SystemParamController : BaseController
@@ -23,6 +23,7 @@ namespace ScoreManagement.Controllers
             _systemParamQuery = systemParamQuery;
         }
 
+        
         [HttpGet("GetSystemParam")]
         public async Task<IActionResult> GetSystemParam()
         {
