@@ -1,4 +1,4 @@
-﻿namespace ScoreManagement.Services.Mail
+﻿namespace ScoreManagement.Services
 {
     public interface IMailService
     {

@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ScoreManagement.Services.Encrypt
+namespace ScoreManagement.Services
 {
     public class EncryptService : IEncryptService
     {

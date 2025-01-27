@@ -6,7 +6,7 @@ using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.Table;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;

@@ -2,7 +2,7 @@ using ScoreManagement.Entity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using ScoreManagement.Hubs;
@@ -12,7 +12,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Query;
-using ScoreManagement.Services.Mail;
 using ScoreManagement.Interfaces.Dashboard;
 using ScoreManagement.Query.Dashboard;
 using ScoreManagement.Interfaces.ExcelScore;
@@ -159,8 +158,9 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddTransient<IEncryptService, EncryptService>();
-builder.Services.AddTransient<IUserQuery, UserQuery>();
 builder.Services.AddTransient<IMailService, MailService>();
+builder.Services.AddTransient<IUtilityService, UtilityService>();
+builder.Services.AddTransient<IUserQuery, UserQuery>();
 builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
 builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
 builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();

@@ -441,10 +441,10 @@ namespace ScoreManagement.Query
         public async Task<bool> UploadStudentScore(SubjectDetailUpload subject, ScoreStudent student, string username)
         {
             // จำลองว่าถ้า student_id เป็น "12345" จะล้มเหลว
-            if (student.student_id == "6430250041" || student.student_id == "6430250042")
-            {
-                return false; // คืนค่า false เพื่อให้การอัปโหลดล้มเหลว
-            }
+            //if (student.student_id == "6430250041" || student.student_id == "6430250042")
+            //{
+            //    return false; // คืนค่า false เพื่อให้การอัปโหลดล้มเหลว
+            //}
             bool flg = false;
             int i = 0;
             using (var connection = new SqlConnection(_connectionString))
@@ -869,9 +869,9 @@ namespace ScoreManagement.Query
                                     insertSubjectCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
                                     insertSubjectCommand.Parameters.AddWithValue("@student_id", student.student_id);
                                     insertSubjectCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                    insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                    insertSubjectCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                    insertSubjectCommand.Parameters.AddWithValue("@final_score", student.final_score);
+                                    insertSubjectCommand.Parameters.AddWithValue("@accumulated_score", (object)student.accumulated_score! ?? DBNull.Value);
+                                    insertSubjectCommand.Parameters.AddWithValue("@midterm_score", (object)student.midterm_score! ?? DBNull.Value);
+                                    insertSubjectCommand.Parameters.AddWithValue("@final_score", (object)student.final_score! ?? DBNull.Value);
                                     insertSubjectCommand.Parameters.AddWithValue("@username", username);
 
                                     i = await insertSubjectCommand.ExecuteNonQueryAsync();
@@ -904,9 +904,9 @@ namespace ScoreManagement.Query
                                     updateSubjectScoreCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
                                     updateSubjectScoreCommand.Parameters.AddWithValue("@student_id", student.student_id);
                                     updateSubjectScoreCommand.Parameters.AddWithValue("@seat_no", student.seat_no);
-                                    updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", student.accumulated_score);
-                                    updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", student.midterm_score);
-                                    updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", student.final_score);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@accumulated_score", (object)student.accumulated_score! ?? DBNull.Value);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@midterm_score", (object)student.midterm_score! ?? DBNull.Value);
+                                    updateSubjectScoreCommand.Parameters.AddWithValue("@final_score", (object)student.final_score! ?? DBNull.Value);
                                     updateSubjectScoreCommand.Parameters.AddWithValue("@username", username);
 
                                     i = await updateSubjectScoreCommand.ExecuteNonQueryAsync();

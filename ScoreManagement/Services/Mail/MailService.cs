@@ -2,7 +2,7 @@
 using ScoreManagement.Entity;
 using System.Net.Mail;
 
-namespace ScoreManagement.Services.Mail
+namespace ScoreManagement.Services
 {
     public class MailService : IMailService
     {

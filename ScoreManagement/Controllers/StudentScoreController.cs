@@ -7,9 +7,7 @@ using ScoreManagement.Entity;
 using ScoreManagement.Hubs;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
-using ScoreManagement.Services.Encrypt;
-using ScoreManagement.Services.Mail;
-//using System.Reflection;
+using ScoreManagement.Services;
 using System.Text.RegularExpressions;
 
 namespace ScoreManagement.Controllers
@@ -25,7 +23,8 @@ namespace ScoreManagement.Controllers
         private readonly IStudentScoreQuery _studentScoreQuery;
         private readonly MailService _mailService;
         private readonly IHubContext<NotificationHub> _notifyHub;
-        public StudentScoreController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IStudentScoreQuery studentScoreQuery, IMailService mailService, IHubContext<NotificationHub> notifyHub)
+        private readonly IUtilityService _utilityService;
+        public StudentScoreController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IStudentScoreQuery studentScoreQuery, IMailService mailService, IHubContext<NotificationHub> notifyHub, IUtilityService utilityService)
         {
             _context = context;
             _encryptService = encryptService;
@@ -33,6 +32,7 @@ namespace ScoreManagement.Controllers
             _studentScoreQuery = studentScoreQuery;
             _mailService = (MailService)mailService;
             _notifyHub = notifyHub;
+            _utilityService = utilityService;
         }
 
         #region controller
@@ -151,10 +151,14 @@ namespace ScoreManagement.Controllers
                     try
                     {
                         // 2. Check and Get email for the current student
-                        var email = await _studentScoreQuery.GetEmailStudent(studentId);
+                        string email = await _studentScoreQuery.GetEmailStudent(studentId);
                         if (string.IsNullOrWhiteSpace(email))
                         {
                             throw new Exception("Email not found or empty");
+                        }
+                        if (_utilityService.IsValidEmail(email))
+                        {
+                            throw new Exception("Email format is invalid");
                         }
                         // 3. Replace Placeholders in subjectEmail and contentEmail
                         string subjectEmail = await ReplacePlaceholders(resource.EmailDetail.SubjectEmail, studentId, resource.SubjectDetail, resource.username);
