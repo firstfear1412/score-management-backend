@@ -1,4 +1,7 @@
-﻿public class DashboardStatisticsResponse
+﻿using Microsoft.Identity.Client;
+using System.Security;
+
+public class DashboardStatisticsResponse
 {
     public class DashboardAccumulatedScore
     {
@@ -51,6 +54,8 @@
         public string? section { get; set; }
 
         public string? student_id {  get; set; }
+
+        public string? seat_no {  get; set; }
 
         public int? accumulated_score { get; set; }
 

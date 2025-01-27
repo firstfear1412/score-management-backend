@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace ScoreManagement.Controllers
 {
-    [Authorize]
-    //[AllowAnonymous]
+    //[Authorize]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     [ApiController]
     public class DashboardController : BaseController
