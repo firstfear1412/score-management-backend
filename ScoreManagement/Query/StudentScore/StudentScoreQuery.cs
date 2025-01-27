@@ -598,21 +598,28 @@ namespace ScoreManagement.Query
                                 }
                             }
                         }
-                        // Step 2: UPDATE active_status เป็น inactive สำหรับ sys_subject_no
-                        string updateSubjectLecturerQuery = @"
-                            UPDATE SubjectLecturer
-                            SET active_status = 'inactive'
-                            WHERE sys_subject_no = @sys_subject_no
-                        ";
-                        using (var updateSubjectLecturerCommand = new SqlCommand(updateSubjectLecturerQuery, connection, transaction))
+                        // Step 2: UPDATE active_status เป็น inactive สำหรับ sys_subject_no ในกรณีที่มี teacher เดิมอยู่แล้ว
+                        if (existingTeachers.Any()) // ตรวจสอบว่ามี existingTeachers หรือไม่
                         {
-                            updateSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
-                            i = await updateSubjectLecturerCommand.ExecuteNonQueryAsync();
-                            flg = i > 0;
-                            if (!flg)
+                            string updateSubjectLecturerQuery = @"
+                                UPDATE SubjectLecturer
+                                SET active_status = 'inactive'
+                                WHERE sys_subject_no = @sys_subject_no
+                            ";
+                            using (var updateSubjectLecturerCommand = new SqlCommand(updateSubjectLecturerQuery, connection, transaction))
                             {
-                                throw new Exception("Failed to update SubjectLecturer for old teacher_code");
+                                updateSubjectLecturerCommand.Parameters.AddWithValue("@sys_subject_no", sysSubjectNo);
+                                i = await updateSubjectLecturerCommand.ExecuteNonQueryAsync();
+                                flg = i > 0;
+                                if (!flg)
+                                {
+                                    throw new Exception("Failed to update SubjectLecturer for old teacher_code");
+                                }
                             }
+                        }
+                        else
+                        {
+                            // กรณีไม่มี existingTeachers ข้ามการทำงาน
                         }
                         // Step 3: INSERT ค่า teacher_code ใหม่ที่ยังไม่มี
                         string insertSubjectLecturerQuery = @"
@@ -659,7 +666,7 @@ namespace ScoreManagement.Query
                                     flg = i > 0;
                                     if (!flg)
                                     {
-                                        throw new Exception("Failed to insert into SubjectLecturer for teacher_code '{teacherCode}'.");
+                                        throw new Exception($"Failed to insert into SubjectLecturer for teacher_code '{teacherCode}'.");
                                     }
                                 }
                             }
@@ -674,7 +681,7 @@ namespace ScoreManagement.Query
                                     flg = i > 0;
                                     if (!flg)
                                     {
-                                        throw new Exception("Failed to update SubjectLecturer for teacher_code '{teacherCode}' to 'active'.");
+                                        throw new Exception($"Failed to update SubjectLecturer for teacher_code '{teacherCode}' to 'active'.");
                                     }
                                 }
                             }
@@ -769,10 +776,18 @@ namespace ScoreManagement.Query
                                     VALUES  
                                     (  
                                         @student_id,  
-                                        @prefix,
+                                        (SELECT byte_code 
+                                        FROM SystemParam 
+                                        WHERE byte_reference = 'prefix' 
+                                            AND byte_desc_th = @prefix 
+                                            AND active_status = 'active'),
                                         @firstname,
                                         @lastname,
-                                        @major_code,
+                                        (SELECT byte_code 
+                                        FROM SystemParam 
+                                        WHERE byte_reference = 'major_code' 
+                                            AND byte_desc_th = @major_code 
+                                            AND active_status = 'active'),
                                         @email,
                                         'active',
                                         GETDATE(),  
@@ -796,7 +811,7 @@ namespace ScoreManagement.Query
                                     flg = i > 0;
                                     if (!flg)
                                     {
-                                        throw new Exception("Failed to insert into Student");
+                                        throw new Exception($"Failed to insert into Student for StudentID '{student.student_id}'");
                                     }
                                 }
                             }
@@ -863,7 +878,7 @@ namespace ScoreManagement.Query
                                     flg = i > 0;
                                     if (!flg)
                                     {
-                                        throw new Exception("Failed to insert into SubjectScore");
+                                        throw new Exception($"Failed to insert into SubjectScore for sys_subject_no '{sysSubjectNo}'");
                                     }
                                 }
                             }
@@ -898,7 +913,7 @@ namespace ScoreManagement.Query
                                     flg = i > 0;
                                     if (!flg)
                                     {
-                                        throw new Exception("Failed to update SubjectScore");
+                                        throw new Exception($"Failed to update SubjectScore for sys_subject_no '{sysSubjectNo}'");
                                     }
                                 }
                             }
@@ -935,7 +950,12 @@ namespace ScoreManagement.Query
             spp.byte_desc_en as prefix_desc_en,
             s.firstname,
             s.lastname,
-            s.major_code,
+            (
+            SELECT byte_desc_th 
+            FROM SystemParam sp 
+            WHERE sp.byte_reference = 'major_code' 
+                AND sp.byte_code = s.major_code 
+                AND sp.active_status = 'active') AS major_code ,
             ss.accumulated_score, 
             ss.midterm_score, 
             ss.final_score, 

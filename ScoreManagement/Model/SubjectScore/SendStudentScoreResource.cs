@@ -10,11 +10,9 @@
     public class SubjectDetail
     {
         public string subject_id { get; set; }
-        public string subject_name { get; set; } // Added SubjectName for mapping
-        public string academic_year { get; set; }
-        public string semester { get; set; }
-        public string section { get; set; }
-        //public string student_id { get; set; }
+        public int academic_year { get; set; }
+        public int semester { get; set; }
+        public int section { get; set; }
     }
 
     public class EmailDetail
