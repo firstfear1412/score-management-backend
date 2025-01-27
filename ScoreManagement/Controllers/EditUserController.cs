@@ -71,25 +71,6 @@ namespace ScoreManagement.Controllers
 
             try
             {
-                //var duplicateEmails = resources
-                //    .GroupBy(r => r.email)
-                //    .Where(g => g.Count() > 1)
-                //    .Select(g => g.Key)
-                //    .ToList();
-
-                //if (duplicateEmails.Any())
-                //{
-                //    return BadRequest(new
-                //    {
-                //        success = false,
-                //        message = new { th = "พบอีเมลที่ซ้ำกัน", en = "Duplicate emails found in the input data." },
-                //        errors = duplicateEmails.Select(email => new
-                //        {
-                //            th = $"อีเมล {email} ซ้ำกัน",
-                //            en = $"Email {email} is duplicated in the input data."
-                //        })
-                //    });
-                //}
 
                 var existingEmails = new List<string>();
                 foreach (var resource in resources)
@@ -140,6 +121,14 @@ namespace ScoreManagement.Controllers
                 // Insert users
                 foreach (var resource in resources)
                 {
+                    resource.email = resource.email?.Trim();
+                    resource.teacher_code = resource.teacher_code?.Trim();
+                    resource.prefix = resource.prefix?.Trim();
+                    resource.firstname = resource.firstname?.Trim();
+                    resource.lastname = resource.lastname?.Trim();
+                    resource.role = resource.role?.Trim();
+                    resource.create_by = resource.create_by?.Trim();
+
                     resource.password = _encryptService.EncryptPassword(resource.teacher_code);
                     resource.create_date = DateTime.Now;
                     resource.active_status = "active";

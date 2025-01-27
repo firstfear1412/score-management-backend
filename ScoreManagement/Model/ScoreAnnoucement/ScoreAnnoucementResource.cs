@@ -41,5 +41,6 @@
         public string? semester { get; set; }
         public string? section { get; set; }
         public string? score_type { get; set; }
+        public string? teacher_code {  get; set; }
     }
 }

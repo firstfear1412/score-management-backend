@@ -33,7 +33,7 @@ namespace ScoreManagement.Query.ExcelScore
 	                                    @academic_year NVARCHAR(MAX) = @p_academic_year, 
 	                                    @semester NVARCHAR(MAX) = @p_semester, 
                                         @section NVARCHAR(MAX) = @p_section,
-	                                    @score_type NVARCHAR(50) = @p_score_type;
+	                                    @score_type NVARCHAR(50) = @p_score_type,
 
                                     SELECT 
                                         s.subject_id AS รหัสวิชา,
