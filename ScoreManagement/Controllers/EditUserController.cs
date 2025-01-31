@@ -4,7 +4,7 @@ using ScoreManagement.Model;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Controllers.Base;
 using System.Text;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
 using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Controllers

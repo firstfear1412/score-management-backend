@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Interfaces;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
 
 
 namespace ScoreManagement.Controllers

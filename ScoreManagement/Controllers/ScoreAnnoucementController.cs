@@ -5,7 +5,7 @@ using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
 
 namespace ScoreManagement.Controllers
 {
