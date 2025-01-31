@@ -83,12 +83,12 @@ namespace ScoreManagement.Query
 
         public async Task<bool> UpdateSystemParam(SystemParamResource param)
         {
-            const string checkQuery = @"
-                                        SELECT COUNT(*) 
-                                        FROM SystemParam 
-                                        WHERE (byte_desc_th = @byte_desc_th OR byte_desc_en = @byte_desc_en)
-                                          AND byte_reference = @byte_reference
-                                          AND byte_code != @byte_code";
+            //const string checkQuery = @"
+            //                            SELECT COUNT(*) 
+            //                            FROM SystemParam 
+            //                            WHERE (byte_desc_th = @byte_desc_th OR byte_desc_en = @byte_desc_en)
+            //                              AND byte_reference = @byte_reference
+            //                              AND byte_code != @byte_code";
 
             const string updateQuery = @"
                                         UPDATE SystemParam
@@ -107,19 +107,19 @@ namespace ScoreManagement.Query
                     await connection.OpenAsync();
 
                     // Check for duplicate values within the same byte_reference
-                    using (var checkCommand = new SqlCommand(checkQuery, connection))
-                    {
-                        checkCommand.Parameters.AddWithValue("@byte_desc_th", param.byte_desc_th ?? (object)DBNull.Value);
-                        checkCommand.Parameters.AddWithValue("@byte_desc_en", param.byte_desc_en ?? (object)DBNull.Value);
-                        checkCommand.Parameters.AddWithValue("@byte_code", param.byte_code);
-                        checkCommand.Parameters.AddWithValue("@byte_reference", param.byte_reference);
+                    //using (var checkCommand = new SqlCommand(checkQuery, connection))
+                    //{
+                    //    checkCommand.Parameters.AddWithValue("@byte_desc_th", param.byte_desc_th ?? (object)DBNull.Value);
+                    //    checkCommand.Parameters.AddWithValue("@byte_desc_en", param.byte_desc_en ?? (object)DBNull.Value);
+                    //    checkCommand.Parameters.AddWithValue("@byte_code", param.byte_code);
+                    //    checkCommand.Parameters.AddWithValue("@byte_reference", param.byte_reference);
 
-                        int count = (int)await checkCommand.ExecuteScalarAsync();
-                        if (count > 0)
-                        {
-                            return false; // Indicate that the update should not proceed due to duplicates
-                        }
-                    }
+                    //    int count = (int)await checkCommand.ExecuteScalarAsync();
+                    //    if (count > 0)
+                    //    {
+                    //        return false;
+                    //    }
+                    //}
 
                     // Proceed to update if no duplicates are found
                     using (var command = new SqlCommand(updateQuery, connection))
