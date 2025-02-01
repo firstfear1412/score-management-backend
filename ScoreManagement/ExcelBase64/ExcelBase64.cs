@@ -59,6 +59,8 @@ namespace ScoreManagement.Helpers
                     row++;
                 }
 
+                worksheet.Cells.AutoFitColumns();
+
                 using (var stream = new MemoryStream())
                 {
                     package.SaveAs(stream);
