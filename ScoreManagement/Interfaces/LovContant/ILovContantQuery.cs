@@ -13,6 +13,7 @@ namespace ScoreManagement.Interfaces
         Task<List<LovContantsResource>> GetLovSectionQuery();
         Task<List<LovContantsResource>> GetLovActiveStatusQuery();
         Task<List<SubjectResource>> GetSubjectByConditionQuery(SubjectResource resource);
+        Task<List<SubjectResource>> GetLovSubject();
     }
 
 }

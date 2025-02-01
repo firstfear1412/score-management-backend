@@ -1,14 +1,10 @@
-﻿using MathNet.Numerics.Distributions;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Org.BouncyCastle.Asn1.Cmp;
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
 using ScoreManagement.Model.Table;
-using System.Transactions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ScoreManagement.Query
 {
@@ -1049,11 +1045,11 @@ namespace ScoreManagement.Query
 	                            GROUP BY sys_subject_no
                             ) sl
                             ON sh.sys_subject_no = sl.sys_subject_no
-                            LEFT JOIN SubjectScore ss
+                            INNER JOIN SubjectScore ss
                                 ON sh.sys_subject_no = ss.sys_subject_no
-                            LEFT JOIN Student s
+                            INNER JOIN Student s
                                 ON ss.student_id = s.student_id
-                            LEFT JOIN Subject sj
+                            INNER JOIN Subject sj
                                 ON sj.subject_id = sh.subject_id
                             LEFT JOIN SystemParam spp 
                                 ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
@@ -1099,7 +1095,7 @@ namespace ScoreManagement.Query
 
             if (!string.IsNullOrEmpty(resource.studentSearch))
             {
-                conditions.Add("CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname, ss.student_id) LIKE '%' + @studentSearch + '%'");
+                conditions.Add("CONCAT(spp.byte_desc_th, ' ', s.firstname, ' ', s.lastname, ss.student_id) COLLATE DATABASE_DEFAULT LIKE '%' + @studentSearch + '%'");
             }
 
             // Only add WHERE if there are conditions
@@ -1168,7 +1164,45 @@ namespace ScoreManagement.Query
 
             return scoreAnnoucementList;
         }
+        public async Task<bool> DeleteScoreQuery(ScoreAnnoucementResource resource)
+        {
+            bool flg = false;
+            int i = 0;
 
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                try
+                {
+                    // สร้าง query SQL แบบ dynamic
+                    string query = $@"
+                        DELETE FROM ScoreManagement.dbo.SubjectScore
+                        WHERE sys_subject_no = @sysSubjectNo AND student_id = @studendId;
+                    ";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@sysSubjectNo", resource.sys_subject_no);
+                        command.Parameters.AddWithValue("@studendId", resource.student_id);
+
+                        i = await command.ExecuteNonQueryAsync();
+                        flg = i == 0 ? false : true;
+                        if (!flg)
+                        {
+                            throw new Exception("Failed to Delete");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+
+                await connection.CloseAsync();
+            }
+
+            return flg;
+        }
         public async Task<int> InsertNotification(NotificationResource resource)
         {
             bool flg = false;
