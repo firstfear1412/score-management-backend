@@ -143,30 +143,82 @@ namespace ScoreManagement.Query
         }
 
 
+        //public async Task<(bool IsSuccess, string Message)> InsertSystemParam(SystemParamResource param)
+        //{
+        //    const string insertQuery = @"
+        //                                IF EXISTS (SELECT 1 FROM SystemParam WHERE byte_desc_th = @byte_desc_th OR byte_desc_en = @byte_desc_en)
+        //                                BEGIN
+        //                                    SELECT 0 AS IsSuccess, 'Duplicate description found.' AS Message;
+        //                                END
+        //                                ELSE IF EXISTS (SELECT 1 FROM SystemParam WHERE byte_reference = @byte_reference AND byte_code = @byte_code)
+        //                                BEGIN
+        //                                    SELECT 0 AS IsSuccess, 'The byte_code already exists.' AS Message;
+        //                                END
+        //                                ELSE
+        //                                BEGIN
+        //                                    DECLARE @nextByteCode INT;
+
+        //                                    SELECT @nextByteCode = ISNULL(MAX(CAST(byte_code AS INT)), 0) + 1
+        //                                    FROM SystemParam
+        //                                    WHERE byte_reference = @byte_reference;
+
+        //                                    INSERT INTO SystemParam (byte_reference, byte_code, byte_desc_th, byte_desc_en, active_status, create_date, create_by)
+        //                                    VALUES (@byte_reference, @nextByteCode, @byte_desc_th, @byte_desc_en, 'active', GETDATE(), @create_by);
+
+        //                                    SELECT 1 AS IsSuccess, 'System parameter inserted successfully.' AS Message;
+        //                                END";
+
+        //    try
+        //    {
+        //        using (var connection = new SqlConnection(_connectionString))
+        //        {
+        //            await connection.OpenAsync();
+
+        //            // Execute the combined query
+        //            using (var command = new SqlCommand(insertQuery, connection))
+        //            {
+        //                command.Parameters.AddWithValue("@byte_desc_th", param.byte_desc_th ?? (object)DBNull.Value);
+        //                command.Parameters.AddWithValue("@byte_desc_en", param.byte_desc_en ?? (object)DBNull.Value);
+        //                command.Parameters.AddWithValue("@byte_reference", param.byte_reference);
+        //                command.Parameters.AddWithValue("@byte_code", param.byte_code);
+        //                command.Parameters.AddWithValue("@create_by", param.create_by ?? (object)DBNull.Value);
+
+        //                using (var reader = await command.ExecuteReaderAsync())
+        //                {
+        //                    if (await reader.ReadAsync())
+        //                    {
+        //                        bool isSuccess = reader.GetInt32(0) == 1;
+        //                        string message = reader.GetString(1);
+        //                        return (isSuccess, message);
+        //                    }
+        //                    else
+        //                    {
+        //                        return (false, "Unexpected error occurred.");
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return (false, $"An error occurred: {ex.Message}");
+        //    }
+        //}
+
+
         public async Task<(bool IsSuccess, string Message)> InsertSystemParam(SystemParamResource param)
         {
             const string insertQuery = @"
-                                        IF EXISTS (SELECT 1 FROM SystemParam WHERE byte_desc_th = @byte_desc_th OR byte_desc_en = @byte_desc_en)
-                                        BEGIN
-                                            SELECT 0 AS IsSuccess, 'Duplicate description found.' AS Message;
-                                        END
-                                        ELSE IF EXISTS (SELECT 1 FROM SystemParam WHERE byte_reference = @byte_reference AND byte_code = @byte_code)
-                                        BEGIN
-                                            SELECT 0 AS IsSuccess, 'The byte_code already exists.' AS Message;
-                                        END
-                                        ELSE
-                                        BEGIN
-                                            DECLARE @nextByteCode INT;
+                                        DECLARE @nextByteCode INT;
 
-                                            SELECT @nextByteCode = ISNULL(MAX(CAST(byte_code AS INT)), 0) + 1
-                                            FROM SystemParam
-                                            WHERE byte_reference = @byte_reference;
+                                        SELECT @nextByteCode = ISNULL(MAX(CAST(byte_code AS INT)), 0) + 1
+                                        FROM SystemParam
+                                        WHERE byte_reference = @byte_reference;
 
-                                            INSERT INTO SystemParam (byte_reference, byte_code, byte_desc_th, byte_desc_en, active_status, create_date, create_by)
-                                            VALUES (@byte_reference, @nextByteCode, @byte_desc_th, @byte_desc_en, 'active', GETDATE(), @create_by);
+                                        INSERT INTO SystemParam (byte_reference, byte_code, byte_desc_th, byte_desc_en, active_status, create_date, create_by)
+                                        VALUES (@byte_reference, @nextByteCode, @byte_desc_th, @byte_desc_en, 'active', GETDATE(), @create_by);
 
-                                            SELECT 1 AS IsSuccess, 'System parameter inserted successfully.' AS Message;
-                                        END";
+                                        SELECT 1 AS IsSuccess, 'System parameter inserted successfully.' AS Message;";
 
             try
             {
@@ -174,14 +226,13 @@ namespace ScoreManagement.Query
                 {
                     await connection.OpenAsync();
 
-                    // Execute the combined query
                     using (var command = new SqlCommand(insertQuery, connection))
                     {
-                        command.Parameters.AddWithValue("@byte_desc_th", param.byte_desc_th ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@byte_desc_en", param.byte_desc_en ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@byte_desc_th", (object?)param.byte_desc_th ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@byte_desc_en", (object?)param.byte_desc_en ?? DBNull.Value);
                         command.Parameters.AddWithValue("@byte_reference", param.byte_reference);
                         command.Parameters.AddWithValue("@byte_code", param.byte_code);
-                        command.Parameters.AddWithValue("@create_by", param.create_by ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@create_by", (object?)param.create_by ?? DBNull.Value);
 
                         using (var reader = await command.ExecuteReaderAsync())
                         {
@@ -204,7 +255,5 @@ namespace ScoreManagement.Query
                 return (false, $"An error occurred: {ex.Message}");
             }
         }
-
-
     }
 }
