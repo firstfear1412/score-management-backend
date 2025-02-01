@@ -1,5 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using ScoreManagement.Entity;
 using ScoreManagement.Interfaces.Dashboard;
+using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
 
 using static DashboardStatisticsResponse;
@@ -8,10 +11,12 @@ namespace ScoreManagement.Query.Dashboard
 {
     public class DashboardQuery : IDashboardQuery
     {
+        private readonly scoreDB _context;
         private readonly string _connectionString;
 
-        public DashboardQuery(IConfiguration configuration)
+        public DashboardQuery(IConfiguration configuration, scoreDB context)
         {
+            _context = context;
             _connectionString = configuration.GetConnectionString("scoreDb")!;
         }
 
@@ -30,10 +35,10 @@ namespace ScoreManagement.Query.Dashboard
             {
                 { "final_score", @"
                                  SELECT
-                                    MAX(ss.final_score) AS max_final_score, 
-                                    MIN(ss.final_score) AS min_final_score, 
-                                    AVG(ss.final_score) AS avg_final_score, 
-                                    ROUND(STDEV(ss.final_score), 1) AS std_final_score, 
+                                    ROUND(MAX(ss.final_score), 2) AS max_final_score, 
+                                    ROUND(MIN(ss.final_score),2) AS min_final_score, 
+                                    ROUND(CONVERT(DECIMAL(10,2), AVG(ss.final_score)), 2) AS avg_final_score, 
+                                    ROUND(STDEV(ss.final_score), 2) AS std_final_score, 
                                     COUNT(DISTINCT ss.student_id) AS number_student
                                 FROM 
                                     (SELECT 
@@ -77,8 +82,10 @@ namespace ScoreManagement.Query.Dashboard
                                       )) " },
 
                 { "midterm_score", @"
-                    SELECT MAX(ss.midterm_score) AS MAX_MIDTERM_SCORE, MIN(ss.midterm_score) AS MIN_MIDTERM_SCORE, 
-                           AVG(ss.midterm_score) AS AVG_MIDTERM_SCORE, ROUND(STDEV(ss.midterm_score), 1) AS STD_MIDTERM_SCORE, 
+                    SELECT  ROUND(MAX(ss.midterm_score),2) AS MAX_MIDTERM_SCORE, 
+                            ROUND(MIN(ss.midterm_score),2) AS MIN_MIDTERM_SCORE, 
+                            ROUND(CONVERT(DECIMAL(10,2), AVG(ss.midterm_score)),2) AS AVG_MIDTERM_SCORE, 
+                            ROUND(STDEV(ss.midterm_score), 2) AS STD_MIDTERM_SCORE, 
                                  COUNT(DISTINCT ss.student_id) AS number_student
                                 FROM 
                                     (SELECT 
@@ -122,8 +129,10 @@ namespace ScoreManagement.Query.Dashboard
                                       ))" },
 
                 { "accumulated_score", @"
-                    SELECT MAX(ss.accumulated_score) AS MAX_ACCUMULATED_SCORE, MIN(ss.accumulated_score) AS MIN_ACCUMULATED_SCORE, 
-                           AVG(ss.accumulated_score) AS AVG_ACCUMULATED_SCORE, ROUND(STDEV(ss.accumulated_score), 1) AS STD_ACCUMULATED_SCORE, 
+                    SELECT ROUND(MAX(ss.accumulated_score),2) AS MAX_ACCUMULATED_SCORE, 
+                           ROUND(MIN(ss.accumulated_score),2) AS MIN_ACCUMULATED_SCORE, 
+                           ROUND(CONVERT(DECIMAL(10,2), AVG(ss.accumulated_score)),2) AS AVG_ACCUMULATED_SCORE, 
+                           ROUND(STDEV(ss.accumulated_score), 2) AS STD_ACCUMULATED_SCORE, 
                                  COUNT(DISTINCT ss.student_id) AS number_student
                                 FROM 
                                     (SELECT 
@@ -250,20 +259,20 @@ namespace ScoreManagement.Query.Dashboard
                 },
 
                 { "total_score", @"SELECT
-                                    MAX(Total) AS MAX_TOTAL,
-                                    MIN(Total) AS MIN_TOTAL,
-                                    AVG(Total) AS AVG_TOTAL,
-                                    ROUND(STDEV(Total), 1) AS STD_TOTAL,
+                                    ROUND(MAX(Total), 2) AS MAX_TOTAL,
+                                    ROUND(MIN(Total), 2) AS MIN_TOTAL,
+									ROUND(CONVERT(DECIMAL(10,2), AVG(Total)), 2) AS AVG_TOTAL,
+                                    ROUND(STDEV(Total), 2) AS STD_TOTAL,
                                     COUNT(DISTINCT ss.student_id) AS number_student
                                 FROM 
                                     (SELECT 
                                         sys_subject_no, 
-                                        student_id, 
+                                        student_id,
                                         accumulated_score, 
                                         midterm_score, 
                                         final_score, 
-                                        (accumulated_score + midterm_score + final_score) AS Total,
-                                        active_status 
+										ROUND(COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0), 2) AS Total,
+                                        active_status
                                     FROM SubjectScore
                                     WHERE active_status = 'active') ss
                                  JOIN 
@@ -307,7 +316,7 @@ namespace ScoreManagement.Query.Dashboard
             {
                 await connection.OpenAsync();
 
-                if (string.IsNullOrEmpty(resource.score_type) || resource.score_type == "คะแนนรวม")
+                if (resource.score_type == "คะแนนรวม" || resource.score_type == "")
                 {
                     using (SqlCommand command = new SqlCommand(queries["total_score"], connection))
                     {
@@ -328,11 +337,11 @@ namespace ScoreManagement.Query.Dashboard
 
                                         total_score = new DashboardTotalScore
                                         {
-                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                            MinTotalScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                            StdTotalScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
-                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                                            MaxTotalScore = reader.IsDBNull(0) ? null : Convert.ToDecimal(reader.GetValue(0)),
+                                            MinTotalScore = reader.IsDBNull(1) ? null : Convert.ToDecimal(reader.GetValue(1)),
+                                            AvgTotalScore = reader.IsDBNull(2) ? null : Convert.ToDecimal(reader.GetValue(2)),
+                                            StdTotalScore = reader.IsDBNull(3) ? null : Convert.ToDecimal(reader.GetValue(3)),
+                                            NumberOfStudents = reader.IsDBNull(4) ? null : reader.GetInt32(4)
                                         }
                                     });
                                 }
@@ -364,9 +373,9 @@ namespace ScoreManagement.Query.Dashboard
                                         section = reader.IsDBNull(5) ? null : reader.GetString(5),
                                         student_id = reader.IsDBNull(6) ? null : reader.GetString(6),
                                         seat_no = reader.IsDBNull(7) ? null : reader.GetString(7),
-                                        accumulated_score = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
-                                        midterm_score = reader.IsDBNull(9) ? 0 : reader.GetInt32(9),
-                                        final_score = reader.IsDBNull(10) ? 0 : reader.GetInt32(10)
+                                        accumulated_score = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
+                                        midterm_score = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
+                                        final_score = reader.IsDBNull(10) ? null : reader.GetDecimal(10)
                                     };
                                     wrapper.Add(data);
                                 }
@@ -411,10 +420,10 @@ namespace ScoreManagement.Query.Dashboard
                                                     //}
                                                     total_score = new DashboardTotalScore
                                                     {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
+                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
                                                         NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
                                                     }
                                                 });
@@ -433,10 +442,10 @@ namespace ScoreManagement.Query.Dashboard
                                                     //}
                                                     total_score = new DashboardTotalScore
                                                     {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
+                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
                                                         NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
                                                     }
                                                 });
@@ -455,10 +464,10 @@ namespace ScoreManagement.Query.Dashboard
                                                     //}
                                                     total_score = new DashboardTotalScore
                                                     {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
+                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
                                                         NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
                                                     }
                                                 });
@@ -498,21 +507,21 @@ namespace ScoreManagement.Query.Dashboard
 
                                     if (mappedScoreType == "accumulated_score")
                                     {
-                                        data.accumulated_score = reader.IsDBNull(8) ? 0 : reader.GetInt32(8);
+                                        data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
                                     }
                                     else if (mappedScoreType == "midterm_score")
                                     {
-                                        data.midterm_score = reader.IsDBNull(9) ? 0 : reader.GetInt32(9);
+                                        data.midterm_score = reader.IsDBNull(9) ? null : reader.GetDecimal(9); reader.GetDecimal(9);
                                     }
                                     else if (mappedScoreType == "final_score")
                                     {
-                                        data.final_score = reader.IsDBNull(10) ? 0 : reader.GetInt32(10);
+                                        data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
                                     }
                                     else
                                     {
-                                        data.accumulated_score = reader.IsDBNull(8) ? 0 : reader.GetInt32(8);
-                                        data.midterm_score = reader.IsDBNull(9) ? 0 : reader.GetInt32(9);
-                                        data.final_score = reader.IsDBNull(10) ? 0 : reader.GetInt32(10);
+                                        data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
+                                        data.midterm_score = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9));
+                                        data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
                                     }
 
                                     wrapper.Add(data);
@@ -525,6 +534,68 @@ namespace ScoreManagement.Query.Dashboard
             }
 
             return responseList;
+        }
+
+        public async Task<List<SubjectResponse>> GetSubjectDashboard(string? teacher_code)
+        {
+            var subjects = new List<SubjectResponse>();
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    string sqlQuery;
+                    if (string.IsNullOrEmpty(teacher_code))
+                    {
+                        // ถ้าไม่มี teacher_code, ใช้ query ที่ไม่ใช้ JOIN
+                        sqlQuery = @"
+                                    SELECT s.subject_id, s.subject_name 
+                                    FROM subject s";
+                    }
+                    else
+                    {
+                        // ถ้ามี teacher_code, ใช้ query ที่มี JOIN
+                        sqlQuery = @"
+                                    SELECT s.subject_id, s.subject_name 
+                                    FROM subject s
+                                    JOIN SubjectHeader sh ON s.subject_id = sh.subject_id
+                                    JOIN SubjectLecturer sl ON sh.sys_subject_no = sl.sys_subject_no
+                                    WHERE sl.teacher_code = NULLIF(@teacher_code, '')";
+                    }
+
+                    using (SqlCommand command = new SqlCommand(sqlQuery, connection))
+                    {
+                        // เพิ่ม parameter ในกรณีที่มี teacher_code
+                        if (!string.IsNullOrEmpty(teacher_code))
+                        {
+                            command.Parameters.AddWithValue("@teacher_code", teacher_code);
+                        }
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                subjects.Add(new SubjectResponse
+                                {
+                                    subject_id = reader["subject_id"].ToString()!,
+                                    subject_name = reader["subject_name"].ToString()!
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("An error occurred while fetching the subject data.", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("An unexpected error occurred.", ex);
+            }
+            return subjects;
         }
     }
 }

@@ -5,37 +5,37 @@ public class DashboardStatisticsResponse
 {
     public class DashboardAccumulatedScore
     {
-        public int? MaxAccumulatedScore { get; set; }
-        public int? MinAccumulatedScore { get; set; }
-        public int? AvgAccumulatedScore { get; set; }
+        public decimal? MaxAccumulatedScore { get; set; }
+        public decimal? MinAccumulatedScore { get; set; }
+        public decimal? AvgAccumulatedScore { get; set; }
         public double? StdAccumulatedScore { get; set; }
         public int? NumberOfStudents { get; set; }
     }
 
     public class DashboardMidtermScore
     {
-        public int? MaxMidtermScore { get; set; }
-        public int? MinMidtermScore { get; set; }
-        public int? AvgMidtermScore { get; set; }
+        public decimal? MaxMidtermScore { get; set; }
+        public decimal? MinMidtermScore { get; set; }
+        public decimal? AvgMidtermScore { get; set; }
         public double? StdMidtermScore { get; set; }
         public int? NumberOfStudents { get; set; }
     }
 
     public class DashboardFinalScore
     {
-        public int? MaxFinalScore { get; set; }
-        public int? MinFinalScore { get; set; }
-        public int? AvgFinalScore { get; set; }
+        public decimal? MaxFinalScore { get; set; }
+        public decimal? MinFinalScore { get; set; }
+        public decimal? AvgFinalScore { get; set; }
         public double? StdFinalScore { get; set; }
         public int? NumberOfStudents { get; set; }
     }
 
     public class DashboardTotalScore
     {
-        public int? MaxTotalScore { get; set; }
-        public int? MinTotalScore { get; set; }
-        public int? AvgTotalScore { get; set; }
-        public double? StdTotalScore { get; set; }
+        public decimal? MaxTotalScore { get; set; }
+        public decimal? MinTotalScore { get; set; }
+        public decimal? AvgTotalScore { get; set; }
+        public decimal? StdTotalScore { get; set; }
         public int? NumberOfStudents { get; set; }
     }
 
@@ -57,10 +57,10 @@ public class DashboardStatisticsResponse
 
         public string? seat_no {  get; set; }
 
-        public int? accumulated_score { get; set; }
+        public decimal? accumulated_score { get; set; }
 
-        public int? midterm_score { get; set; }
+        public decimal? midterm_score { get; set; }
 
-        public int? final_score { get; set; }
+        public decimal? final_score { get; set; }
     }
 }

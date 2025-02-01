@@ -112,20 +112,9 @@ namespace ScoreManagement.Controllers
             {
                 var result = await _systemParamQuery.InsertSystemParam(param);
 
-                if (!result.IsSuccess)
-                {
-                    return BadRequest(new
-                    {
-                        isSuccess = result.IsSuccess,
-                        message = result.Message
-                    });
-                }
-
-                return Ok(new
-                {
-                    isSuccess = result.IsSuccess,
-                    message = result.Message
-                });
+                return result.IsSuccess
+                    ? Ok(new { isSuccess = true, message = result.Message })
+                    : BadRequest(new { isSuccess = false, message = result.Message });
             }
             catch (Exception ex)
             {
@@ -137,7 +126,5 @@ namespace ScoreManagement.Controllers
                 });
             }
         }
-
-
     }
 }
