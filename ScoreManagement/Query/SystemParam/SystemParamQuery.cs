@@ -142,7 +142,6 @@ namespace ScoreManagement.Query
             }
         }
 
-
         //public async Task<(bool IsSuccess, string Message)> InsertSystemParam(SystemParamResource param)
         //{
         //    const string insertQuery = @"
