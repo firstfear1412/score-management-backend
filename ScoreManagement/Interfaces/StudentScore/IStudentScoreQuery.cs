@@ -16,6 +16,7 @@ namespace ScoreManagement.Interfaces
         Task<bool> UpdateSendEmail(SubjectDetail resource, string studentId, string username, int send_status, string send_desc = "");
         Task<string> GetEmailStudent(string student_id);
         Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByConditionQuery(ScoreAnnoucementResource resource);
+        Task<bool> DeleteScoreQuery(ScoreAnnoucementResource resource);
         Task<int> InsertNotification(NotificationResource resource);
         Task<NotificationResponse<string>> GetLatestNotification(int notificationId);
     }

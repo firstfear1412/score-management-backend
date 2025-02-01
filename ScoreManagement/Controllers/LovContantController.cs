@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ScoreManagement.Controllers.Base;
 using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
 using ScoreManagement.Services;
 
 
@@ -81,6 +82,64 @@ namespace ScoreManagement.Controllers
         {
             var result = await _lovContantQuery.GetLovSectionQuery();
             return await GetLovDataResponse(result);
+        }
+        [AllowAnonymous]
+        [HttpPost("GetLovSubject")]
+        public async Task<IActionResult> GetSubjectByConditionController([FromBody] SubjectResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? scoreList = null;  // Store user information here
+            bool isSuccess = false;
+
+            try
+            {
+                //if(!string.IsNullOrEmpty(resource.teacher_code) ) { 
+                if (true)
+                {
+                    var scoreQuery = await _lovContantQuery.GetLovSubject(); // Call GetUserInfo method to retrieve user data
+
+
+                    if (scoreQuery != null && scoreQuery.Any())
+                    {
+                        scoreList = scoreQuery;
+                        isSuccess = true;
+                        messageKey = "data_found";
+                        messageDesc = "Data found";
+                    }
+                    else
+                    {
+                        messageKey = "data_not_found";
+                        messageDesc = "Data not found";
+                    }
+                }
+                else
+                {
+                    messageDesc = "กรุณากรอกรหัสวิชาหรือรายชื่อวิชา";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                //_webEvent.WriteLogException(resource.score_create_by!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
+
+            if (!isSuccess)
+            {
+                //_webEvent.WriteLogInfo(resource.score_create_by!, messageDesc.Trim(), pathBase);
+            }
+
+            // Respond with the user info or error message
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                objectResponse: scoreList
+            );
+
+            return StatusCode(200, response);
         }
 
         [AllowAnonymous]

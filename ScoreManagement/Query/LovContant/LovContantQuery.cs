@@ -128,6 +128,47 @@ namespace ScoreManagement.Query
 
             return subjectList;
         }
+        public async Task<List<SubjectResource>> GetLovSubject()
+        {
+            var subjectList = new List<SubjectResource>();
+            string sqlContext = @"SELECT subject_id,subject_name
+                FROM Subject";
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (SqlCommand command = new SqlCommand(sqlContext, connection))
+                    {
+                        // Add parameters
+
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var result = new SubjectResource
+                                {
+                                    subject_id = reader["subject_id"]?.ToString(),
+                                    subject_name = reader["subject_name"]?.ToString(),
+
+                                };
+                                subjectList.Add(result);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (add your logging mechanism here)
+                Console.WriteLine($"Error: {ex.Message}");
+                throw;
+            }
+
+            return subjectList;
+        }
     }
 
 }

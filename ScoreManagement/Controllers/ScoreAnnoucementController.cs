@@ -40,30 +40,20 @@ namespace ScoreManagement.Controllers
 
             try
             {
-                //if(!string.IsNullOrEmpty(resource.teacher_code) ) { 
-                if (true)
+                var scoreQuery = await _studentScoreQuery.GetScoreAnnoucementByConditionQuery(resource); // Call GetUserInfo method to retrieve user data
+
+                if (scoreQuery != null && scoreQuery.Any())
                 {
-                    var scoreQuery = await _studentScoreQuery.GetScoreAnnoucementByConditionQuery(resource); // Call GetUserInfo method to retrieve user data
-
-
-                    if (scoreQuery != null && scoreQuery.Any())
-                    {
-                        scoreList = scoreQuery;
-                        isSuccess = true;
-                        messageKey = "data_found";
-                        messageDesc = "Data found";
-                    }
-                    else
-                    {
-                        messageKey = "data_not_found";
-                        messageDesc = "Data not found";
-                    }
+                    scoreList = scoreQuery;
+                    isSuccess = true;
+                    messageKey = "data_found";
+                    messageDesc = "Data found";
                 }
                 else
                 {
-                    messageDesc = "กรุณากรอกรหัสวิชาหรือรายชื่อวิชา";
+                    messageKey = "data_not_found";
+                    messageDesc = "Data not found";
                 }
-
             }
             catch (Exception ex)
             {
@@ -99,30 +89,69 @@ namespace ScoreManagement.Controllers
 
             try
             {
-                //if(!string.IsNullOrEmpty(resource.teacher_code) ) { 
-                if (true)
+                var scoreQuery = await _LovContantQuery.GetSubjectByConditionQuery(resource); // Call GetUserInfo method to retrieve user data
+
+                if (scoreQuery != null && scoreQuery.Any())
                 {
-                    var scoreQuery = await _LovContantQuery.GetSubjectByConditionQuery(resource); // Call GetUserInfo method to retrieve user data
-
-
-                    if (scoreQuery != null && scoreQuery.Any())
-                    {
-                        scoreList = scoreQuery;
-                        isSuccess = true;
-                        messageKey = "data_found";
-                        messageDesc = "Data found";
-                    }
-                    else
-                    {
-                        messageKey = "data_not_found";
-                        messageDesc = "Data not found";
-                    }
+                    scoreList = scoreQuery;
+                    isSuccess = true;
+                    messageKey = "data_found";
+                    messageDesc = "Data found";
                 }
                 else
                 {
-                    messageDesc = "กรุณากรอกรหัสวิชาหรือรายชื่อวิชา";
+                    messageKey = "data_not_found";
+                    messageDesc = "Data not found";
                 }
+            }
+            catch (Exception ex)
+            {
+                //_webEvent.WriteLogException(resource.score_create_by!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
 
+            if (!isSuccess)
+            {
+                //_webEvent.WriteLogInfo(resource.score_create_by!, messageDesc.Trim(), pathBase);
+            }
+
+            // Respond with the user info or error message
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                objectResponse: scoreList
+            );
+
+            return StatusCode(200, response);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("DeleteSubjectScoreByCondition")]
+        public async Task<IActionResult> DeleteSubjectScoreByConditionController([FromBody] ScoreAnnoucementResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? scoreList = null;  // Store user information here
+            bool isSuccess = false;
+
+            try
+            {
+                var scoreQuery = await _studentScoreQuery.DeleteScoreQuery(resource); // Call GetUserInfo method to retrieve user data
+
+                if (scoreQuery)
+                {
+                    scoreList = scoreQuery;
+                    isSuccess = true;
+                    messageKey = "data_found";
+                    messageDesc = "Data found";
+                }
+                else
+                {
+                    messageKey = "data_not_found";
+                    messageDesc = "Data not found";
+                }
             }
             catch (Exception ex)
             {
@@ -146,4 +175,6 @@ namespace ScoreManagement.Controllers
             return StatusCode(200, response);
         }
     }
+
+
 }
