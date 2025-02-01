@@ -12,7 +12,7 @@ namespace ScoreManagement.Interfaces
         Task<bool> CreateTemplateEmail(EmailTemplateResource resource);
         Task<bool> DeleteTemplateEmail(EmailTemplateResource resource);
         Task<bool> SetDefaultTemplateEmail(EmailTemplateResource resource);
-        Task<bool> UploadStudentScore(SubjectDetailUpload subject, ScoreStudent student, string username);
+        Task<(bool isSuccess, List<string> failedStudentIds)> UploadStudentScore(UploadScoreResource resource, string username);
         Task<bool> UpdateSendEmail(SubjectDetail resource, string studentId, string username, int send_status, string send_desc = "");
         Task<string> GetEmailStudent(string student_id);
         Task<List<ScoreAnnoucementResource>> GetScoreAnnoucementByConditionQuery(ScoreAnnoucementResource resource);

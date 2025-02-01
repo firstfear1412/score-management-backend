@@ -45,7 +45,7 @@ namespace ScoreManagement.Controllers
             string message = string.Empty;
             string messageKey = string.Empty;
             var parameter = new Dictionary<string, string>();
-            List<string> failedStudentIds = new List<string>();
+            //List<string> failedStudentIds = new List<string>();
             try
             {
                 if (resource == null || resource.data == null)
@@ -56,43 +56,13 @@ namespace ScoreManagement.Controllers
                         message = "resource is required"
                     });
                 }
-                //foreach (var student in resource.data)
-                //{
-                //var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
-                ////var result = true;
 
-                //if (!result)
-                //{
-                //    message = $"Failed to upload score for student ID: {student.student_id}";
-                //    break; // ออกจากลูปเมื่อพบความล้มเหลว
-                //}
-                //else
-                //{
-                //    isSuccess = true;
-                //}
-                //}
+                var (flg, failedStudentIds) = await _studentScoreQuery.UploadStudentScore(resource, resource.username);
 
-                //if (isSuccess)
-                //{
-                //    message = $"All student scores uploaded successfully.";
-                //}
 
-                //this code improve optimize from 30s to 6s when query 50 item
-                var tasks = resource.data.Select(async student =>
+                if (flg == true && failedStudentIds.Count == 0)
                 {
-                    var result = await _studentScoreQuery.UploadStudentScore(resource.subject, student, resource.username);
-                    if (!result)
-                    {
-                        failedStudentIds.Add(student.student_id);
-                    }
-                    return result;
-                });
-
-                await Task.WhenAll(tasks);
-
-                if(failedStudentIds.Count == 0)
-                {
-                    isSuccess = true;
+                    isSuccess = flg;
                     message = "All student scores uploaded successfully.";
                 }
                 else

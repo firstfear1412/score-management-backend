@@ -1,4 +1,6 @@
-﻿namespace ScoreManagement.Model.ScoreAnnoucement
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace ScoreManagement.Model.ScoreAnnoucement
 {
     public class ScoreAnnoucementResource
     {
@@ -18,9 +20,15 @@
         public string? firstname { get; set; }
         public string? lastname { get; set; }
         public string? seat_no { get; set; }
-        public int? accumulated_score { get; set; }
-        public int? midterm_score { get; set; }
-        public int? final_score { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? accumulated_score { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal ? midterm_score { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal ? final_score { get; set; }
         public string? send_status_code { get; set; }
         public string? send_status_code_desc_th { get; set; }
         public string? send_status_code_desc_en { get; set; }
