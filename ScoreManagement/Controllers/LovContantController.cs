@@ -85,7 +85,7 @@ namespace ScoreManagement.Controllers
         }
         [AllowAnonymous]
         [HttpPost("GetLovSubject")]
-        public async Task<IActionResult> GetSubjectByConditionController([FromBody] SubjectResource resource)
+        public async Task<IActionResult> GetSubjectByConditionController()
         {
             HttpContext pathBase = HttpContext;
             string messageDesc = string.Empty;
