@@ -1013,52 +1013,52 @@ namespace ScoreManagement.Query
             var scoreAnnoucementList = new List<ScoreAnnoucementResource>();
 
             string query = @"
-        SELECT
-            ss.seat_no, 
-            sh.sys_subject_no, 
-            sh.subject_id, 
-            sh.academic_year, 
-            sh.semester, 
-            sh.[section],
-            ss.student_id,
-            s.prefix as prefix_code,
-            spp.byte_desc_th as prefix_desc_th,
-            spp.byte_desc_en as prefix_desc_en,
-            s.firstname,
-            s.lastname,
-            (
-            SELECT byte_desc_th 
-            FROM SystemParam sp 
-            WHERE sp.byte_reference = 'major_code' 
-                AND sp.byte_code = s.major_code 
-                AND sp.active_status = 'active') AS major_code ,
-            ss.accumulated_score, 
-            ss.midterm_score, 
-            ss.final_score, 
-            ss.send_status as send_status_code,                        
-            sps.byte_desc_th as send_status_code_desc_th,
-            sps.byte_desc_en as send_status_code_desc_en,
-            ss.send_desc,
-            s.email
-        FROM SubjectHeader sh
-        INNER JOIN (
-	        SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
-	        FROM SubjectLecturer
-	        WHERE active_status = 'active'
-	        AND (@teacherCode IS NULL OR teacher_code = @teacherCode)
-	        GROUP BY sys_subject_no
-        ) sl
-        ON sh.sys_subject_no = sl.sys_subject_no
-        LEFT JOIN SubjectScore ss
-            ON sh.sys_subject_no = ss.sys_subject_no
-        LEFT JOIN Student s
-            ON ss.student_id = s.student_id
-        LEFT JOIN Subject sj
-            ON sj.subject_id = sh.subject_id
-        LEFT JOIN SystemParam spp 
-            ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
-        LEFT JOIN SystemParam sps
-            ON ss.send_status = sps.byte_code AND sps.byte_reference = 'send_status'
+                            SELECT
+                                ss.seat_no, 
+                                sh.sys_subject_no, 
+                                sh.subject_id, 
+                                sh.academic_year, 
+                                sh.semester, 
+                                sh.[section],
+                                ss.student_id,
+                                s.prefix as prefix_code,
+                                spp.byte_desc_th as prefix_desc_th,
+                                spp.byte_desc_en as prefix_desc_en,
+                                s.firstname,
+                                s.lastname,
+                                (
+                                SELECT byte_desc_th 
+                                FROM SystemParam sp 
+                                WHERE sp.byte_reference = 'major_code' 
+                                    AND sp.byte_code = s.major_code 
+                                    AND sp.active_status = 'active') AS major_code ,
+                                ss.accumulated_score, 
+                                ss.midterm_score, 
+                                ss.final_score, 
+                                ss.send_status as send_status_code,                        
+                                sps.byte_desc_th as send_status_code_desc_th,
+                                sps.byte_desc_en as send_status_code_desc_en,
+                                ss.send_desc,
+                                s.email
+                            FROM SubjectHeader sh
+                            INNER JOIN (
+	                            SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+	                            FROM SubjectLecturer
+	                            WHERE active_status = 'active'
+	                            AND (@teacherCode IS NULL OR teacher_code = @teacherCode)
+	                            GROUP BY sys_subject_no
+                            ) sl
+                            ON sh.sys_subject_no = sl.sys_subject_no
+                            LEFT JOIN SubjectScore ss
+                                ON sh.sys_subject_no = ss.sys_subject_no
+                            LEFT JOIN Student s
+                                ON ss.student_id = s.student_id
+                            LEFT JOIN Subject sj
+                                ON sj.subject_id = sh.subject_id
+                            LEFT JOIN SystemParam spp 
+                                ON s.prefix = spp.byte_code AND spp.byte_reference = 'prefix'
+                            LEFT JOIN SystemParam sps
+                                ON ss.send_status = sps.byte_code AND sps.byte_reference = 'send_status'
     ";
 
             // List to dynamically store conditions
