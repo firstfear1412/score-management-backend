@@ -334,14 +334,13 @@ namespace ScoreManagement.Query.Dashboard
                                 {
                                     responseList.Add(new
                                     {
-
                                         total_score = new DashboardTotalScore
                                         {
-                                            MaxTotalScore = reader.IsDBNull(0) ? null : Convert.ToDecimal(reader.GetValue(0)),
-                                            MinTotalScore = reader.IsDBNull(1) ? null : Convert.ToDecimal(reader.GetValue(1)),
-                                            AvgTotalScore = reader.IsDBNull(2) ? null : Convert.ToDecimal(reader.GetValue(2)),
-                                            StdTotalScore = reader.IsDBNull(3) ? null : Convert.ToDecimal(reader.GetValue(3)),
-                                            NumberOfStudents = reader.IsDBNull(4) ? null : reader.GetInt32(4)
+                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                            MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                            StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
+                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
                                         }
                                     });
                                 }
