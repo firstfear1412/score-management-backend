@@ -29,9 +29,9 @@ namespace ScoreManagement.Query.ExcelScore
                     await connection.OpenAsync();
 
                     string query = @"
-                                    DECLARE @subject_id NVARCHAR(MAX) = @p_subject_id, 
-	                                    @academic_year NVARCHAR(MAX) = @p_academic_year, 
-	                                    @semester NVARCHAR(MAX) = @p_semester, 
+                                    DECLARE @subject_id NVARCHAR(MAX) = @p_subject_id,
+	                                    @academic_year NVARCHAR(MAX) = @p_academic_year,
+	                                    @semester NVARCHAR(MAX) = @p_semester,
                                         @section NVARCHAR(MAX) = @p_section,
 	                                    @score_type NVARCHAR(50) = @p_score_type;
 

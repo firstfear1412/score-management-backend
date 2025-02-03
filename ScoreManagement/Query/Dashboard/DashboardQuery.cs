@@ -86,7 +86,7 @@ namespace ScoreManagement.Query.Dashboard
                             ROUND(MIN(ss.midterm_score),2) AS MIN_MIDTERM_SCORE, 
                             ROUND(CONVERT(DECIMAL(10,2), AVG(ss.midterm_score)),2) AS AVG_MIDTERM_SCORE, 
                             ROUND(STDEV(ss.midterm_score), 2) AS STD_MIDTERM_SCORE, 
-                                 COUNT(DISTINCT ss.student_id) AS number_student
+                            COUNT(DISTINCT ss.student_id) AS number_student
                                 FROM 
                                     (SELECT 
                                         sys_subject_no, 
@@ -312,85 +312,15 @@ namespace ScoreManagement.Query.Dashboard
 
             List<DashboardStudentScore> wrapper = new List<DashboardStudentScore>();
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
-
-                if (resource.score_type == "คะแนนรวม" || resource.score_type == "")
+                using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    using (SqlCommand command = new SqlCommand(queries["total_score"], connection))
+                    await connection.OpenAsync();
+
+                    if (resource.score_type == "คะแนนรวม" || resource.score_type == "")
                     {
-                        command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
-                        command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
-                        command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
-                        command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
-                        command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
-
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                        {
-                            if (reader.HasRows)
-                            {
-                                while (reader.Read())
-                                {
-                                    responseList.Add(new
-                                    {
-                                        total_score = new DashboardTotalScore
-                                        {
-                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
-                                            MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
-                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
-                                            StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
-                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    using (SqlCommand command = new SqlCommand(queries["student_score"], connection))
-                    {
-                        command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
-                        command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
-                        command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
-                        command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
-                        command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
-
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                        {
-                            if (reader.HasRows)
-                            {
-                                while (reader.Read())
-                                {
-                                    var data = new DashboardStudentScore
-                                    {
-                                        sys_subject_no = reader.IsDBNull(0) ? null : reader.GetInt32(0),
-                                        subject_id = reader.IsDBNull(1) ? null : reader.GetString(1),
-                                        subject_name = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                        academic_year = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                        semester = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                        section = reader.IsDBNull(5) ? null : reader.GetString(5),
-                                        student_id = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                        seat_no = reader.IsDBNull(7) ? null : reader.GetString(7),
-                                        accumulated_score = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
-                                        midterm_score = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
-                                        final_score = reader.IsDBNull(10) ? null : reader.GetDecimal(10)
-                                    };
-                                    wrapper.Add(data);
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // กรณีที่ score_type มีค่าเป็น midterm_score, final_score, หรือ accumulated_score
-                    string? mappedScoreType = scoreTypeMapping.ContainsKey(resource.score_type) ? scoreTypeMapping[resource.score_type] : null;
-
-
-                    if (mappedScoreType != null && queries.ContainsKey(mappedScoreType))
-                    {
-                        using (SqlCommand command = new SqlCommand(queries[mappedScoreType], connection))
+                        using (SqlCommand command = new SqlCommand(queries["total_score"], connection))
                         {
                             command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
                             command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
@@ -404,132 +334,185 @@ namespace ScoreManagement.Query.Dashboard
                                 {
                                     while (reader.Read())
                                     {
-                                        switch (mappedScoreType)
+                                        responseList.Add(new
                                         {
-                                            case "final_score":
-                                                responseList.Add(new
-                                                {
-                                                    //final_score = new DashboardFinalScore
-                                                    //{
-                                                    //    MaxFinalScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                    //    MinFinalScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                    //    AvgFinalScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                    //    StdFinalScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
-                                                    //    NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    //}
-                                                    total_score = new DashboardTotalScore
-                                                    {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
-                                                        NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    }
-                                                });
-                                                break;
+                                            total_score = new DashboardTotalScore
+                                            {
+                                                MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
+                                                NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        }
 
-                                            case "midterm_score":
-                                                responseList.Add(new
-                                                {
-                                                    //midterm_score = new DashboardMidtermScore
-                                                    //{
-                                                    //    MaxMidtermScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                    //    MinMidtermScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                    //    AvgMidtermScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                    //    StdMidtermScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
-                                                    //    NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    //}
-                                                    total_score = new DashboardTotalScore
-                                                    {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
-                                                        NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    }
-                                                });
-                                                break;
+                        using (SqlCommand command = new SqlCommand(queries["student_score"], connection))
+                        {
+                            command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
+                            command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
+                            command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
+                            command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
+                            command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
 
-                                            case "accumulated_score":
-                                                responseList.Add(new
-                                                {
-                                                    //accumulated_score = new DashboardAccumulatedScore
-                                                    //{
-                                                    //    MaxAccumulatedScore = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                                                    //    MinAccumulatedScore = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                                                    //    AvgAccumulatedScore = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
-                                                    //    StdAccumulatedScore = reader.IsDBNull(3) ? 0 : reader.GetDouble(3),
-                                                    //    NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    //}
-                                                    total_score = new DashboardTotalScore
+                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    while (reader.Read())
+                                    {
+                                        var data = new DashboardStudentScore
+                                        {
+                                            sys_subject_no = reader.IsDBNull(0) ? null : reader.GetInt32(0),
+                                            subject_id = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                            subject_name = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                            academic_year = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                            semester = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                            section = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                            student_id = reader.IsDBNull(6) ? null : reader.GetString(6),
+                                            seat_no = reader.IsDBNull(7) ? null : reader.GetString(7),
+                                            accumulated_score = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
+                                            midterm_score = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
+                                            final_score = reader.IsDBNull(10) ? null : reader.GetDecimal(10)
+                                        };
+                                        wrapper.Add(data);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // กรณีที่ score_type มีค่าเป็น midterm_score, final_score, หรือ accumulated_score
+                        string? mappedScoreType = scoreTypeMapping.ContainsKey(resource.score_type) ? scoreTypeMapping[resource.score_type] : null;
+
+
+                        if (mappedScoreType != null && queries.ContainsKey(mappedScoreType))
+                        {
+                            using (SqlCommand command = new SqlCommand(queries[mappedScoreType], connection))
+                            {
+                                command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
+                                command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
+                                command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
+                                command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
+                                command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
+
+                                using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                                {
+                                    if (reader.HasRows)
+                                    {
+                                        while (reader.Read())
+                                        {
+                                            switch (mappedScoreType)
+                                            {
+                                                case "final_score":
+                                                    responseList.Add(new
                                                     {
-                                                        MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
-                                                        MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
-                                                        AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
-                                                        StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
-                                                        NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                                                    }
-                                                });
-                                                break;
+                                                        total_score = new DashboardTotalScore
+                                                        {
+                                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                            MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                            StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
+                                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                                                        }
+                                                    });
+                                                    break;
+
+                                                case "midterm_score":
+                                                    responseList.Add(new
+                                                    {
+                                                        total_score = new DashboardTotalScore
+                                                        {
+                                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                            MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                            StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
+                                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                                                        }
+                                                    });
+                                                    break;
+
+                                                case "accumulated_score":
+                                                    responseList.Add(new
+                                                    {
+                                                        total_score = new DashboardTotalScore
+                                                        {
+                                                            MaxTotalScore = reader.IsDBNull(0) ? 0 : Convert.ToDecimal(reader.GetValue(0)),
+                                                            MinTotalScore = reader.IsDBNull(1) ? 0 : Convert.ToDecimal(reader.GetValue(1)),
+                                                            AvgTotalScore = reader.IsDBNull(2) ? 0 : Convert.ToDecimal(reader.GetValue(2)),
+                                                            StdTotalScore = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3)),
+                                                            NumberOfStudents = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                                                        }
+                                                    });
+                                                    break;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    using (SqlCommand command = new SqlCommand(queries["student_score"], connection))
-                    {
-                        command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
-                        command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
-                        command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
-                        command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
-                        command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
-
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        using (SqlCommand command = new SqlCommand(queries["student_score"], connection))
                         {
-                            if (reader.HasRows)
+                            command.Parameters.AddWithValue("@subject_id", string.IsNullOrEmpty(resource.subject_id) ? DBNull.Value : (object)resource.subject_id);
+                            command.Parameters.AddWithValue("@academic_year", string.IsNullOrEmpty(resource.academic_year) ? DBNull.Value : (object)resource.academic_year);
+                            command.Parameters.AddWithValue("@semester", string.IsNullOrEmpty(resource.semester) ? DBNull.Value : (object)resource.semester);
+                            command.Parameters.AddWithValue("@section", string.IsNullOrEmpty(resource.section) ? DBNull.Value : (object)resource.section);
+                            command.Parameters.AddWithValue("@teacher_code", string.IsNullOrEmpty(resource.teacher_code) ? DBNull.Value : (object)resource.teacher_code);
+
+                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
                             {
-                                while (reader.Read())
+                                if (reader.HasRows)
                                 {
-                                    var data = new DashboardStudentScore
+                                    while (reader.Read())
                                     {
-                                        sys_subject_no = reader.IsDBNull(0) ? null : reader.GetInt32(0),
-                                        subject_id = reader.IsDBNull(1) ? null : reader.GetString(1),
-                                        subject_name = reader.IsDBNull(2) ? null : reader.GetString(2),
-                                        academic_year = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                        semester = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                        section = reader.IsDBNull(5) ? null : reader.GetString(5),
-                                        student_id = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                        seat_no = reader.IsDBNull(7) ? null : reader.GetString(7),
-                                    };
+                                        var data = new DashboardStudentScore
+                                        {
+                                            sys_subject_no = reader.IsDBNull(0) ? null : reader.GetInt32(0),
+                                            subject_id = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                            subject_name = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                            academic_year = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                            semester = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                            section = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                            student_id = reader.IsDBNull(6) ? null : reader.GetString(6),
+                                            seat_no = reader.IsDBNull(7) ? null : reader.GetString(7),
+                                        };
 
-                                    if (mappedScoreType == "accumulated_score")
-                                    {
-                                        data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
-                                    }
-                                    else if (mappedScoreType == "midterm_score")
-                                    {
-                                        data.midterm_score = reader.IsDBNull(9) ? null : reader.GetDecimal(9); reader.GetDecimal(9);
-                                    }
-                                    else if (mappedScoreType == "final_score")
-                                    {
-                                        data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
-                                    }
-                                    else
-                                    {
-                                        data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
-                                        data.midterm_score = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9));
-                                        data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
-                                    }
+                                        if (mappedScoreType == "accumulated_score")
+                                        {
+                                            data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
+                                        }
+                                        else if (mappedScoreType == "midterm_score")
+                                        {
+                                            data.midterm_score = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9));
+                                        }
+                                        else if (mappedScoreType == "final_score")
+                                        {
+                                            data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
+                                        }
+                                        else
+                                        {
+                                            data.accumulated_score = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8));
+                                            data.midterm_score = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9));
+                                            data.final_score = reader.IsDBNull(10) ? null : Convert.ToDecimal(reader.GetValue(10));
+                                        }
 
-                                    wrapper.Add(data);
+                                        wrapper.Add(data);
+                                    }
                                 }
                             }
                         }
                     }
+                    responseList.Add(new { StudentScore = wrapper });
                 }
-                responseList.Add(new { StudentScore = wrapper });
+            }
+            catch (Exception ex) { 
+
+            Console.WriteLine(ex.Message);
             }
 
             return responseList;
