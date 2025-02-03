@@ -44,9 +44,9 @@ namespace ScoreManagement.Model
     {
         public string subject_id { get; set; }
         public string subject_name { get; set; }
-        public string academic_year { get; set; }
-        public string semester { get; set; }
-        public string section { get; set; }
+        public int academic_year { get; set; }
+        public int semester { get; set; }
+        public int section { get; set; }
         public List<string> teacher { get; set; }
     }
 }

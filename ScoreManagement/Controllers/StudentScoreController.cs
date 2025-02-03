@@ -36,7 +36,7 @@ namespace ScoreManagement.Controllers
         }
 
         #region controller
-        [AllowAnonymous]
+        //[AllowAnonymous]
         [HttpPost("UploadScore")]
         public async Task<IActionResult> UploadStudentScore([FromBody] UploadScoreResource resource)
         {
@@ -45,17 +45,89 @@ namespace ScoreManagement.Controllers
             string message = string.Empty;
             string messageKey = string.Empty;
             var parameter = new Dictionary<string, string>();
+            List<string> missingFields = new List<string>();
             //List<string> failedStudentIds = new List<string>();
             try
             {
-                if (resource == null || resource.data == null)
+                #region validate
+                // ตรวจสอบว่า resource มีค่าหรือไม่
+                if (resource == null)
                 {
-                    return StatusCode(400, new
+                    message = "Resource is required";
+                    return StatusCode(400, ApiResponse<string>(isSuccess, message));
+                }
+
+                // ตรวจสอบ SubjectDetail
+                if (resource.subject == null)
+                {
+                    missingFields.Add("Subject resource is required.");
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(resource.subject.subject_id))
+                        missingFields.Add("Subject Code is required.");
+                    if (string.IsNullOrWhiteSpace(resource.subject.subject_name))
+                        missingFields.Add("Subject Name is required.");
+                    if (resource.subject.academic_year <= 0)
+                        missingFields.Add("Academic_year must be greater than 0.");
+                    if (resource.subject.semester <= 0)
+                        missingFields.Add("Semester must be greater than 0.");
+                    if (resource.subject.section <= 0)
+                        missingFields.Add("Section must be greater than 0.");
+                }
+
+                // ตรวจสอบ EmailDetail
+                if (resource.data == null)
+                {
+                    missingFields.Add("Email resource is required.");
+                }
+                else
+                {
+                    object lockObj = new object();
+                    Parallel.ForEach(resource.data, student =>
                     {
-                        isSuccess = false,
-                        message = "resource is required"
+                        List<string> localErrors = new List<string>();
+
+                        if (
+                        string.IsNullOrWhiteSpace(student.seat_no)
+                        ||string.IsNullOrWhiteSpace(student.student_id)
+                        ||string.IsNullOrWhiteSpace(student.prefix)
+                        ||string.IsNullOrWhiteSpace(student.firstname)
+                        ||string.IsNullOrWhiteSpace(student.lastname)
+                        ||string.IsNullOrWhiteSpace(student.major_code)
+                        ||string.IsNullOrWhiteSpace(student.email)
+                        ) {
+                            localErrors.Add($"Format invalid for student ID {student.student_id ?? "Unknown"}.");
+                        } 
+
+                        if (localErrors.Any())
+                        {
+                            lock (lockObj)
+                            {
+                                missingFields.AddRange(localErrors);
+                            }
+                        }
                     });
                 }
+
+                // ตรวจสอบ username
+                if (string.IsNullOrWhiteSpace(resource.username))
+                {
+                    missingFields.Add("Username is required.");
+                }
+
+                // ถ้ามีข้อผิดพลาดให้ส่ง response กลับเป็น string
+                if (missingFields.Count > 0)
+                {
+                    message = string.Join("\n", missingFields); // แปลง List เป็น String โดยใช้ \n แยกบรรทัด
+                                                                // Return response with success status and error messages
+
+                    return StatusCode(200, ApiResponse<string>(
+                        isSuccess: isSuccess,
+                        messageDescription: message
+                    ));
+                }
+                #endregion validate
 
                 var (flg, failedStudentIds) = await _studentScoreQuery.UploadStudentScore(resource, resource.username);
 
@@ -103,17 +175,72 @@ namespace ScoreManagement.Controllers
             Dictionary<string, string> sendFailStudentDetails = new Dictionary<string, string>();
             int successCount = 0; // เก็บจำนวนการส่งสำเร็จ
             int failCount = 0;    // เก็บจำนวนการส่งล้มเหลว
+            List<string> missingFields = new List<string>();
 
             try
             {
-                if (resource == null || resource.SubjectDetail == null || resource.EmailDetail == null)
+                #region validate
+                // ตรวจสอบว่า resource มีค่าหรือไม่
+                if (resource == null)
                 {
-                    return StatusCode(400, new
-                    {
-                        isSuccess = isSuccess,
-                        message = "Resource is required"
-                    });
+                    message = "Resource is required";
+                    return StatusCode(400, ApiResponse<string>(isSuccess, message));
                 }
+
+                // ตรวจสอบ SubjectDetail
+                if (resource.SubjectDetail == null)
+                {
+                    missingFields.Add("Subject resource is required.");
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(resource.SubjectDetail.subject_id))
+                        missingFields.Add("Subject Code is required.");
+                    if (resource.SubjectDetail.academic_year <= 0)
+                        missingFields.Add("Academic_year must be greater than 0.");
+                    if (resource.SubjectDetail.semester <= 0)
+                        missingFields.Add("Semester must be greater than 0.");
+                    if (resource.SubjectDetail.section <= 0)
+                        missingFields.Add("Section must be greater than 0.");
+                }
+
+                // ตรวจสอบ EmailDetail
+                if (resource.EmailDetail == null)
+                {
+                    missingFields.Add("Email resource is required.");
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(resource.EmailDetail.SubjectEmail))
+                        missingFields.Add("Subject Email is required.");
+                    if (string.IsNullOrWhiteSpace(resource.EmailDetail.ContentEmail))
+                        missingFields.Add("Content Email is required.");
+                }
+
+                // ตรวจสอบ username
+                if (string.IsNullOrWhiteSpace(resource.username))
+                {
+                    missingFields.Add("Username is required.");
+                }
+
+                // ตรวจสอบ student_id
+                if (resource.student_id == null || resource.student_id.Count == 0)
+                {
+                    missingFields.Add("Student ID is required and must have at least one student.");
+                }
+
+                // ถ้ามีข้อผิดพลาดให้ส่ง response กลับเป็น string
+                if (missingFields.Count > 0)
+                {
+                    message = string.Join("\n", missingFields); // แปลง List เป็น String โดยใช้ \n แยกบรรทัด
+                    // Return response with success status and error messages
+                    
+                    return StatusCode(200, ApiResponse<string>(
+                        isSuccess: isSuccess,
+                        messageDescription: message
+                    ));
+                }
+                #endregion validate
 
                 // 1. Loop through each student_id in the list
                 foreach (var studentId in resource.student_id)
