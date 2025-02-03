@@ -126,7 +126,7 @@ namespace ScoreManagement.Controllers
                         {
                             throw new Exception("Email not found or empty");
                         }
-                        if (_utilityService.IsValidEmail(email))
+                        if (!_utilityService.IsValidEmail(email))
                         {
                             throw new Exception("Email format is invalid");
                         }
