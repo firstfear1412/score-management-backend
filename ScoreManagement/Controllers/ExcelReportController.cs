@@ -23,14 +23,31 @@ namespace ScoreManagement.Controllers
         [HttpPost("CreateExcelScore")]
         public async Task<IActionResult> CreateExcelScore([FromBody] ExcelScoreRequest request)
         {
-            var data = await _excel_score.GetScoreReportAsync(request);
-            if (data == null || !data.Any())
-            {
-                return NotFound("No data found.");
-            }
 
-            string base64Excel = ExcelHelper.GenerateExcelBase64(data);
-            return Ok(new { file = base64Excel });
+            if(request.score_type == "คะแนนรวม") 
+            {
+                var data = await _excel_score.GetScoreReportAsync(request);
+
+                if (data == null || !data.Any())
+                {
+                    return NotFound("No data found.");
+                }
+
+                string base64Excel = ExcelHelper.GenerateExcelBase64(data);
+                return Ok(new { file = base64Excel });
+            }
+            else
+            {
+                var data = await _excel_score.GetScoreReportAsync_Other(request);
+
+                if (data == null || !data.Any())
+                {
+                    return NotFound("No data found.");
+                }
+
+                string base64Excel = ExcelHelper.GenerateExcelBase64_Other(data);
+                return Ok(new { file = base64Excel });
+            }
         }
     }
 }

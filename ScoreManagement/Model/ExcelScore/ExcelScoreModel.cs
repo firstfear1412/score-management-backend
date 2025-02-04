@@ -21,6 +21,26 @@
         public int? Count80Plus { get; set; }
     }
 
+    public class ExcelScoreModel_Other
+    {
+        public string? SubjectId { get; set; }
+        public string? SubjectName { get; set; }
+        public string? AcademicYear { get; set; }
+        public string? Semester { get; set; }
+        public string? Section { get; set; }
+        public string? ScoreType { get; set; }
+        public int? StudentCount { get; set; }
+        public decimal? AverageScore { get; set; }
+        public decimal? MinScore { get; set; }
+        public decimal? MaxScore { get; set; }
+        public double? StandardDeviation { get; set; }
+        public int? Sum0_9 { get; set; }
+        public int? Sum10_19 { get; set; }
+        public int? Sum20_29 { get; set; }
+        public int? Sum30_39 { get; set; }
+        public int? Count40Plus { get; set; }
+    }
+
     public class ExcelScoreRequest
     {
         public string? subject_id { get; set; }
