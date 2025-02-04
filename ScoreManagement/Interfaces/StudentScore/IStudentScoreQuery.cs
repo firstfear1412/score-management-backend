@@ -6,7 +6,7 @@ namespace ScoreManagement.Interfaces
 {
     public interface IStudentScoreQuery
     {
-        PlaceholderMapping GetPlaceholderMapping(string placeholderKey);
+        Task<PlaceholderMappingResponse> GetPlaceholderMapping(string placeholderKey);
         Task<string> GetFieldValue(SubjectDetail subjectDetail, string studentId, string sourceTable, string fieldName, string condition, string username);
         Task<bool> UpdateTemplateEmail(EmailTemplateResource resource);
         Task<bool> CreateTemplateEmail(EmailTemplateResource resource);

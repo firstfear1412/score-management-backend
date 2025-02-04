@@ -208,6 +208,7 @@ app.UseCors("AllowSpecificOrigin");
 
 // Add signalIR Hub
 app.MapHub<NotificationHub>("/notifyHub");
+app.MapHub<ProgressHub>("/progressHub");
 
 app.MapControllers();
 

@@ -19,10 +19,36 @@ namespace ScoreManagement.Query
             _configuration = configuration;
             _connectionString = configuration.GetConnectionString("scoreDb")!;
         }
-        public PlaceholderMapping GetPlaceholderMapping(string placeholderKey)
+        public async Task<PlaceholderMappingResponse> GetPlaceholderMapping(string placeholderKey)
         {
-            return _context.PlaceholderMappings
-                             .FirstOrDefault(p => p.placeholder_key == placeholderKey && p.active_status == "active")!;
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                string query = "SELECT  source_table, field_name, condition FROM PlaceholderMapping WHERE placeholder_key = @placeholderKey AND active_status = 'active'";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@placeholderKey", placeholderKey);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (reader.Read())
+                        {
+                            var md = new PlaceholderMappingResponse();
+                            int col = 0;
+                            int colNull = 0;
+                            md.source_table = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.field_name = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            md.condition = !reader.IsDBNull(colNull++) ? reader.GetString(col) : default; col++;
+                            col = 0;
+                            colNull = 0;
+                            return md;
+                        }
+                    }
+                }
+            }
+            return null; // คืนค่าเป็น null ถ้าไม่พบข้อมูล
         }
 
         public async Task<string> GetFieldValue(SubjectDetail subjectDetail, string studentId, string sourceTable, string fieldName, string condition, string username)
