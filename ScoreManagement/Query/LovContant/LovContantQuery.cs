@@ -131,7 +131,10 @@ namespace ScoreManagement.Query
         public async Task<List<SubjectResource>> GetLovSubject(SubjectResource resource)
         {
             var subjectList = new List<SubjectResource>();
-            string sqlContext = @"WITH SubjectRanked AS (
+            string sqlContext;
+            if (resource.role == 2)
+            {
+                sqlContext = @"WITH SubjectRanked AS (
                                 SELECT sj.row_id,sj.subject_id, 
                                        sj.subject_name,
                                        sl.teacher_code,
@@ -154,6 +157,14 @@ namespace ScoreManagement.Query
                             FROM SubjectRanked
                             WHERE row_num = 1
                             ORDER BY row_id DESC";
+            }
+            else
+            {
+                sqlContext = @"SELECT MIN(sj.row_id) AS row_id, sj.subject_id, MIN(sj.subject_name) AS subject_name 
+                                FROM Subject sj 
+                                GROUP BY sj.subject_id 
+                                ORDER BY row_id DESC;";
+            }
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
