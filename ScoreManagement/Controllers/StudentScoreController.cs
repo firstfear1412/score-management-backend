@@ -8,7 +8,6 @@ using ScoreManagement.Hubs;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Services;
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace ScoreManagement.Controllers
@@ -245,70 +244,18 @@ namespace ScoreManagement.Controllers
                 }
                 #endregion validate
 
-                #region oldCode
-                // 1. Loop through each student_id in the list
-                //foreach (var studentId in resource.student_id)
-                //int maxDegreeOfParallelism = 2; // ควบคุมจำนวนงานที่ทำงานพร้อมกัน
-                //var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
-                //await Parallel.ForEachAsync(resource.student_id!, parallelOptions, async (studentId, cancellationToken) =>
-                //{
-                //    try
-                //    {
-                //        // 2. Check and Get email for the current student
-                //        string email = await _studentScoreQuery.GetEmailStudent(studentId);
-                //        if (string.IsNullOrWhiteSpace(email))
-                //        {
-                //            throw new Exception("Email not found or empty");
-                //        }
-                //        if (!_utilityService.IsValidEmail(email))
-                //        {
-                //            throw new Exception("Email format is invalid");
-                //        }
-                //        // 3. Replace Placeholders in subjectEmail and contentEmail
-                //        string subjectEmail = await ReplacePlaceholders(resource.EmailDetail!.SubjectEmail, studentId, resource.SubjectDetail!, resource.username);
-                //        string contentEmail = await ReplacePlaceholders(resource.EmailDetail.ContentEmail, studentId, resource.SubjectDetail, resource.username);
-                //        string contentHTML = $@"<pre style='tab-size: 8;font-size: 13px; white-space: pre;'>{contentEmail}</pre>";
-
-
-                //        // 4. Send email
-                //        bool isSent = _mailService.SendMail(subjectEmail, contentHTML, email, true);
-
-                //        // 5. If email is sent successfully, update send_status to success
-                //        if (isSent)
-                //        {
-                //            await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail, studentId, resource.username, 3);
-                //            //successCount++;
-                //            Interlocked.Increment(ref successCount);
-                //        }
-                //        else
-                //        {
-                //            throw new Exception("Email sending failed");
-                //        }
-                //        await _progressHub.Clients.All.SendAsync("ReceiveProgress", successCount + failCount, resource.student_id!.Count);
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        sendFailStudentDetails[studentId] = ex.Message;
-                //        await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 2, ex.Message);
-                //        //failCount++;
-                //        Interlocked.Increment(ref failCount);
-                //        //message = ex.Message; // Store the error message
-                //        //_webEvent.WriteLogException(resource.username, message.Trim(), ex, pathBase); // Log exception
-                //    }
-                //});
-                #endregion oldCode
-
                 // แบ่ง studentIds ออกเป็น batches ตาม maxDegreeOfParallelism
                 int maxDegreeOfParallelism = 5; // จำนวนงานพร้อมกันในแต่ละ batch
 
                 //var studentIds = Enumerable.Range(1, 1000).Select(i => $"STU{i:D3}").ToList(); // สมมุติ 10 รายการ
-
+                
                 var batches = resource.student_id!
                     .Select((id, index) => new { id, index })
                     .GroupBy(x => x.index / maxDegreeOfParallelism)
                     .Select(g => g.Select(x => x.id).ToList())
                     .ToList();
 
+                // 1. Loop through each batches in the list for split task follow by maxDegreeOfParallelism
                 foreach (var batch in batches)
                 {
                     // สร้าง task สำหรับแต่ละงานใน batch
@@ -347,7 +294,6 @@ namespace ScoreManagement.Controllers
                             {
                                 throw new Exception("Email sending failed");
                             }
-                            //await _progressHub.Clients.All.SendAsync("ReceiveProgress", successCount + failCount, resource.student_id!.Count);
                         }
                         catch (Exception ex)
                         {

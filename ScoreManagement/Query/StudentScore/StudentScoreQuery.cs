@@ -1,6 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Entity;
+using ScoreManagement.Hubs;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
@@ -12,11 +14,13 @@ namespace ScoreManagement.Query
         private readonly scoreDB _context;
         private readonly IConfiguration _configuration;
         private readonly string _connectionString;
-        public StudentScoreQuery(IConfiguration configuration, scoreDB context)
+        private readonly IHubContext<ProgressHub> _progressHub;
+        public StudentScoreQuery(IConfiguration configuration, scoreDB context, IHubContext<ProgressHub> progressHub)
         {
             _context = context;
             _configuration = configuration;
             _connectionString = configuration.GetConnectionString("scoreDb")!;
+            _progressHub = progressHub;
         }
         public async Task<PlaceholderMappingResponse> GetPlaceholderMapping(string placeholderKey)
         {
@@ -469,6 +473,11 @@ namespace ScoreManagement.Query
             object lockObject = new object(); // ใช้สำหรับล็อกการเข้าถึง failedStudentIds เมื่อใช้ Task whenAll
             bool flg = false;
             bool hasSuccess = false; // ตัวแปรเพื่อตรวจสอบว่า มี student ที่สำเร็จบ้างหรือไม่
+            int successCount = 0;
+            int failCount = 0;
+            int maxConcurrentTasks = 5; // Limit the number of concurrent tasks
+            SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrentTasks);
+
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync(); // เปิด Connection ครั้งเดียว
@@ -481,29 +490,39 @@ namespace ScoreManagement.Query
                         int sysSubjectNo = await ExcuteSubjectHeaderQuery(connection, transaction, resource.subject, username);
                         await ExcuteSubjectLecturerQuery(connection, transaction, resource.subject, sysSubjectNo, username);
 
-                        var tasks = resource.data.Select(async student =>
-                        {
-                            try
-                            {
-                                await ExcuteStudentQuery(connection, transaction, student, username);
-                                await ExcuteSubjectScoreQuery(connection, transaction, student, sysSubjectNo, username);
+                        var batches = resource.data
+                        .Select((student, index) => new { student, index })
+                        .GroupBy(x => x.index / maxConcurrentTasks)
+                        .Select(g => g.Select(x => x.student).ToList())
+                        .ToList();
 
-                                // ถ้าทำงานสำเร็จ ให้ตั้งค่า flag ว่ามีการสำเร็จ
-                                lock (lockObject)
+                        // 1. Loop through each batch
+                        foreach (var batch in batches)
+                        {
+                            var tasks = batch.Select(async student =>
+                            {
+                                try
                                 {
+                                    await ExcuteStudentQuery(connection, transaction, student, username);
+                                    await ExcuteSubjectScoreQuery(connection, transaction, student, sysSubjectNo, username);
+
+                                    Interlocked.Increment(ref successCount);
                                     hasSuccess = true;
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                lock (lockObject)
+                                catch (Exception ex)
                                 {
                                     failedStudentIds.Add(student.student_id);
+                                    Interlocked.Increment(ref failCount);
                                 }
-                            }
-                        });
 
-                        await Task.WhenAll(tasks);
+                            });
+
+                            await Task.WhenAll(tasks);
+
+                            // ส่ง signal ไปที่ Hub เมื่อ batch เสร็จ
+                            await _progressHub.Clients.All.SendAsync("ReceiveProgress", successCount, failCount);
+                        }
+
 
                         // ถ้าไม่มี student ที่สำเร็จเลย ให้ทำการ Rollback
                         if (!hasSuccess)
