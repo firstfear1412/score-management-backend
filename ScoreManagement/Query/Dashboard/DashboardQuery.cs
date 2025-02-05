@@ -540,11 +540,12 @@ namespace ScoreManagement.Query.Dashboard
                     {
                         // ถ้ามี teacher_code, ใช้ query ที่มี JOIN
                         sqlQuery = @"
-                                    SELECT s.subject_id, s.subject_name 
-                                    FROM subject s
-                                    JOIN SubjectHeader sh ON s.subject_id = sh.subject_id
-                                    JOIN SubjectLecturer sl ON sh.sys_subject_no = sl.sys_subject_no
-                                    WHERE sl.teacher_code = NULLIF(@teacher_code, '')";
+						   SELECT s.subject_id, s.subject_name 
+                                   FROM subject s
+                                   JOIN SubjectHeader sh ON s.subject_id = sh.subject_id
+                                   JOIN SubjectLecturer sl ON sh.sys_subject_no = sl.sys_subject_no
+                                   WHERE sl.teacher_code = NULLIF(@teacher_code, '')
+								   GROUP BY s.subject_id, s.subject_name";
                     }
 
                     using (SqlCommand command = new SqlCommand(sqlQuery, connection))
