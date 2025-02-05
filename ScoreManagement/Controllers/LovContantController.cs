@@ -85,7 +85,7 @@ namespace ScoreManagement.Controllers
         }
         [AllowAnonymous]
         [HttpPost("GetLovSubject")]
-        public async Task<IActionResult> GetSubjectByConditionController()
+        public async Task<IActionResult> GetSubjectByConditionController([FromBody] SubjectResource resource)
         {
             HttpContext pathBase = HttpContext;
             string messageDesc = string.Empty;
@@ -98,7 +98,7 @@ namespace ScoreManagement.Controllers
                 //if(!string.IsNullOrEmpty(resource.teacher_code) ) { 
                 if (true)
                 {
-                    var scoreQuery = await _lovContantQuery.GetLovSubject(); // Call GetUserInfo method to retrieve user data
+                    var scoreQuery = await _lovContantQuery.GetLovSubject(resource); // Call GetLovSubject method to retrieve user data
 
 
                     if (scoreQuery != null && scoreQuery.Any())

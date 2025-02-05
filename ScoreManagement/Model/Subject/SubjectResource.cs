@@ -18,6 +18,8 @@
 
         public string? update_by { get; set; }
         public string? subjectSearch { get; set; }
+        public string? teacher_code { get; set; }
+        public int? role { get; set; }
 
     }
 }

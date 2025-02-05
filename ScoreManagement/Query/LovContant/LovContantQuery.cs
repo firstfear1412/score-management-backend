@@ -128,11 +128,32 @@ namespace ScoreManagement.Query
 
             return subjectList;
         }
-        public async Task<List<SubjectResource>> GetLovSubject()
+        public async Task<List<SubjectResource>> GetLovSubject(SubjectResource resource)
         {
             var subjectList = new List<SubjectResource>();
-            string sqlContext = @"SELECT subject_id,subject_name
-                FROM Subject";
+            string sqlContext = @"WITH SubjectRanked AS (
+                                SELECT sj.row_id,sj.subject_id, 
+                                       sj.subject_name,
+                                       sl.teacher_code,
+                                       ROW_NUMBER() OVER (PARTITION BY sj.subject_id ORDER BY sj.create_by DESC) AS row_num
+                                FROM Subject sj
+                                INNER JOIN SubjectHeader sh 
+                                    ON sh.subject_id = sj.subject_id 
+                                INNER JOIN (
+                                    SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+                                    FROM SubjectLecturer
+                                    WHERE active_status = 'active'
+                                    AND (@teacherCode IS NULL OR teacher_code = @teacherCode)
+                                    GROUP BY sys_subject_no
+                                ) sl 
+                                ON sh.sys_subject_no = sl.sys_subject_no
+                            )
+                            SELECT row_id,subject_id, 
+                                   subject_name,
+                                   teacher_code
+                            FROM SubjectRanked
+                            WHERE row_num = 1
+                            ORDER BY row_id DESC";
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -142,6 +163,7 @@ namespace ScoreManagement.Query
                     using (SqlCommand command = new SqlCommand(sqlContext, connection))
                     {
                         // Add parameters
+                        command.Parameters.AddWithValue("@teacherCode", resource.role == 2 ? (object)resource.teacher_code : DBNull.Value);
 
 
                         using (SqlDataReader reader = await command.ExecuteReaderAsync())

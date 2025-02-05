@@ -144,13 +144,13 @@ namespace ScoreManagement.Controllers
                 {
                     scoreList = scoreQuery;
                     isSuccess = true;
-                    messageKey = "data_found";
-                    messageDesc = "Data found";
+                    messageKey = "alrt_del_score_success_text";
+                    messageDesc = "Successfully deleted!";
                 }
                 else
                 {
                     messageKey = "data_not_found";
-                    messageDesc = "Data not found";
+                    messageDesc = "ไม่เจอข้อมูลที่ต้องการลบ";
                 }
             }
             catch (Exception ex)
