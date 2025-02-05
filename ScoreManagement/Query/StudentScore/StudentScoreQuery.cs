@@ -4,7 +4,6 @@ using ScoreManagement.Entity;
 using ScoreManagement.Interfaces;
 using ScoreManagement.Model;
 using ScoreManagement.Model.ScoreAnnoucement;
-using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Query
 {
@@ -1166,9 +1165,9 @@ namespace ScoreManagement.Query
                                     lastname = reader["lastname"]?.ToString(),
                                     major_code = reader["major_code"]?.ToString(),
                                     seat_no = reader["seat_no"]?.ToString(),
-                                    accumulated_score = reader["accumulated_score"] as decimal? ?? default,
-                                    midterm_score = reader["midterm_score"] as decimal? ?? default,
-                                    final_score = reader["final_score"] as decimal? ?? default,
+                                    accumulated_score = reader["accumulated_score"] as decimal? ?? null,
+                                    midterm_score = reader["midterm_score"] as decimal? ?? null,
+                                    final_score = reader["final_score"] as decimal? ?? null,
                                     send_status_code = reader["send_status_code"]?.ToString(),
                                     send_status_code_desc_th = reader["send_status_code_desc_th"]?.ToString(),
                                     send_status_code_desc_en = reader["send_status_code_desc_en"]?.ToString(),
