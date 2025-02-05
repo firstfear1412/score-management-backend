@@ -43,6 +43,7 @@ namespace ScoreManagement.Controllers
 
                 // Transform data into the desired format
                 var result = systemParams
+                    .Where(sp => !new[] { "score_type", "role", "send_status", "active_status", "semester"}.Contains(sp.byte_reference))
                     .GroupBy(sp => sp.byte_reference)
                     .Select(group => new MasterData
                     {
