@@ -245,7 +245,7 @@ namespace ScoreManagement.Controllers
                 #endregion validate
 
                 // แบ่ง studentIds ออกเป็น batches ตาม maxDegreeOfParallelism
-                int maxDegreeOfParallelism = 5; // จำนวนงานพร้อมกันในแต่ละ batch
+                int maxDegreeOfParallelism = 10; // จำนวนงานพร้อมกันในแต่ละ batch
 
                 //var studentIds = Enumerable.Range(1, 1000).Select(i => $"STU{i:D3}").ToList(); // สมมุติ 10 รายการ
                 
@@ -286,7 +286,7 @@ namespace ScoreManagement.Controllers
                             // 5. If email is sent successfully, update send_status to success
                             if (isSent)
                             {
-                                await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail, studentId, resource.username, 3);
+                                await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 3);
                                 //successCount++;
                                 Interlocked.Increment(ref successCount);
                             }
@@ -313,7 +313,6 @@ namespace ScoreManagement.Controllers
                     await _progressHub.Clients.All.SendAsync("ReceiveProgress", successCount, failCount);
                 }
 
-                
 
 
                 // Set success flag if there are no failures
@@ -481,15 +480,43 @@ namespace ScoreManagement.Controllers
         #region function
         private async Task<string> ReplacePlaceholders(string template, string studentId, SubjectDetail subjectDetail, string username)
         {
-            foreach (var placeholderKey in GetPlaceholderKeys(template))
+            var placeholderKeys = GetPlaceholderKeys(template);
+            var tasks = new List<Task<KeyValuePair<string, string>>>();
+
+            // ใช้ Parallel Execution โดยสร้าง Task สำหรับการดึงข้อมูล placeholder แต่ละตัว
+            foreach (var placeholderKey in placeholderKeys)
             {
-                var mapping = await _studentScoreQuery.GetPlaceholderMapping(placeholderKey);
-                if (mapping != null)
+                tasks.Add(Task.Run(async () =>
                 {
-                    var fieldValue = await _studentScoreQuery.GetFieldValue(subjectDetail, studentId, mapping.source_table!, mapping.field_name!, mapping.condition!, username);
-                    template = template.Replace(placeholderKey, fieldValue);
-                }
+                    var mapping = await _studentScoreQuery.GetPlaceholderMapping(placeholderKey);
+                    if (mapping != null)
+                    {
+                        var fieldValue = await _studentScoreQuery.GetFieldValue(subjectDetail, studentId, mapping.source_table!, mapping.field_name!, mapping.condition!, username);
+                        return new KeyValuePair<string, string>(placeholderKey, fieldValue);
+                    }
+                    return new KeyValuePair<string, string>(placeholderKey, string.Empty); // กรณีที่ไม่มี mapping
+                }));
             }
+
+            // รอให้ทุก Task เสร็จสิ้น
+            var results = await Task.WhenAll(tasks);
+
+            // เติมค่า placeholder ลงใน template
+            foreach (var result in results)
+            {
+                template = template.Replace(result.Key, result.Value);
+            }
+            #region oldcode
+            //foreach (var placeholderKey in GetPlaceholderKeys(template))
+            //{
+            //    var mapping = await _studentScoreQuery.GetPlaceholderMapping(placeholderKey);
+            //    if (mapping != null)
+            //    {
+            //        var fieldValue = await _studentScoreQuery.GetFieldValue(subjectDetail, studentId, mapping.source_table!, mapping.field_name!, mapping.condition!, username);
+            //        template = template.Replace(placeholderKey, fieldValue);
+            //    }
+            //}
+            #endregion oldcode
             return template;
         }
 
