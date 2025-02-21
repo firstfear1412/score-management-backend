@@ -217,50 +217,53 @@ namespace ScoreManagement.Controllers
                         flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
                         if (flg)
                         {
-                            if (resource.newPassword == resource.conNewPassword)
+                            if (resource.password != resource.newPassword)
                             {
-                                resource.newPassword = _encryptService.EncryptPassword(resource.newPassword!);
-                                await _userQuery.updateUserByConditionQuery(resource)!;
+                                if (resource.newPassword == resource.conNewPassword)
+                                {
+                                    resource.newPassword = _encryptService.EncryptPassword(resource.newPassword!);
+                                    await _userQuery.updateUserByConditionQuery(resource)!;
 
-                                users.date_login = DateTime.Now;
-                                users.update_date = DateTime.Now;
-                                users.update_by = resource.update_by;
-                                users.total_failed = 0;
-                                sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed , [update_by] = @update_by";
-                                flg = await _userQuery.UpdateUser(users, sql);
+                                    users.date_login = DateTime.Now;
+                                    users.update_date = DateTime.Now;
+                                    users.update_by = resource.update_by;
+                                    users.total_failed = 0;
+                                    sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed , [update_by] = @update_by";
+                                    flg = await _userQuery.UpdateUser(users, sql);
 
-                                isSuccess = true;
-                                messageDesc = "Password has changed.";
+                                    isSuccess = true;
+                                    messageDesc = "Password has changed.";
+                                }
+                                else
+                                {
+                                    messageKey = "newpwd_mismatch";
+                                    messageDesc = "The new password and confirmation password must be the same.";
+                                }
                             }
                             else
                             {
-                                messageKey = "login_failed";
-                                messageDesc = "The new password and confirmation password do not match. ";
+                                messageKey = "newpwd_match_oldpwd";
+                                messageDesc = "The new password must not match the old password.";
                             }
-
                         }
                         else
                         {
-                            messageKey = "login_failed";
-                            messageDesc = "Invalid password.";
+                            messageKey = "password_invaild";
+                            messageDesc = "Invalid password. Please try again or contact admin.";
 
                         }
                     }
                     else
                     {
-                        messageKey = "login_user_not_found";
-                        messageDesc = "Invalid Username or password. Please try again or contact admin.";
+                        messageKey = "password_invaild";
+                        messageDesc = "Invalid password. Please try again or contact admin.";
                     }
 
                 }
                 else
                 {
-                    //message = "input required";
-
                     messageDesc = "field is required";
                 }
-
-                //_context.SaveChanges();
             }
             catch (Exception ex)
             {
