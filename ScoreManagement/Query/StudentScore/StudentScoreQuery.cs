@@ -477,7 +477,6 @@ namespace ScoreManagement.Query
             int failCount = 0;
             int maxConcurrentTasks = 5; // Limit the number of concurrent tasks
             SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrentTasks);
-
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync(); // เปิด Connection ครั้งเดียว
@@ -487,8 +486,11 @@ namespace ScoreManagement.Query
                     {
                         // เรียกฟังก์ชัน TableQuery
                         await ExcuteSubjectQuery(connection, transaction, resource.subject, username);
+
                         int sysSubjectNo = await ExcuteSubjectHeaderQuery(connection, transaction, resource.subject, username);
+
                         await ExcuteSubjectLecturerQuery(connection, transaction, resource.subject, sysSubjectNo, username);
+
 
                         var batches = resource.data
                         .Select((student, index) => new { student, index })
@@ -514,7 +516,6 @@ namespace ScoreManagement.Query
                                     failedStudentIds.Add(student.student_id);
                                     Interlocked.Increment(ref failCount);
                                 }
-
                             });
 
                             await Task.WhenAll(tasks);
@@ -542,6 +543,7 @@ namespace ScoreManagement.Query
                         throw;
                     }
                 }
+
             }
             return (flg, failedStudentIds);
         }
