@@ -18,6 +18,8 @@ namespace ScoreManagement.Interfaces
 
         Task<bool> CheckTeacherCodeExist(string teacher_code);
 
+        Task<(List<string> existingEmails, List<string> existingTeacherCodes)> CheckExistingUsers(List<string> emails, List<string> teacherCodes);
+
         Task<bool> UpdateUserById(UserResource resource, string query);
     }
 }

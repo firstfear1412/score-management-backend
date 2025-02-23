@@ -39,7 +39,7 @@ namespace ScoreManagement.Query
                             ,[update_by]
                         FROM [User]
                         WHERE username = @username
-                            AND active_status = 'active'
+                        AND active_status = 'active'
                     ";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -223,7 +223,8 @@ namespace ScoreManagement.Query
                             LEFT JOIN 
                                 SystemParam spr ON u.role = spr.byte_code AND spr.byte_reference = 'role' 
                             LEFT JOIN 
-                                SystemParam spp ON u.prefix = spp.byte_code AND spp.byte_reference = 'prefix' ";
+                                SystemParam spp ON u.prefix = spp.byte_code AND spp.byte_reference = 'prefix' 
+                                ORDER BY u.update_date DESC";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -303,6 +304,42 @@ namespace ScoreManagement.Query
                 }
             }
         }
+
+        public async Task<(List<string> existingEmails, List<string> existingTeacherCodes)> CheckExistingUsers(List<string> emails, List<string> teacherCodes)
+        {
+            var existingEmails = new List<string>();
+            var existingTeacherCodes = new List<string>();
+
+            const string query = @"
+                            SELECT email, teacher_code 
+                            FROM [User] 
+                            WHERE email IN (@Emails) OR teacher_code IN (@TeacherCodes)";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    // ส่งค่าในรูปแบบที่ถูกต้อง เช่น ใส่เครื่องหมายจุลภาคและไม่ใช้ IN กับหลายค่าใน string
+                    command.Parameters.AddWithValue("@Emails", string.Join(",", emails));
+                    command.Parameters.AddWithValue("@TeacherCodes", string.Join(",", teacherCodes));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                existingEmails.Add(reader.GetString(0));
+                            if (!reader.IsDBNull(1))
+                                existingTeacherCodes.Add(reader.GetString(1));
+                        }
+                    }
+                }
+            }
+
+            return (existingEmails, existingTeacherCodes);
+        }
+
 
         public async Task<bool> InsertUser(UserResource resource)
         {

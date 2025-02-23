@@ -54,6 +54,106 @@ namespace ScoreManagement.Controllers
         }
 
 
+        //[HttpPost("InsertUser")]
+        //public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources, [FromQuery] string language = "th")
+        //{
+        //    language = string.IsNullOrEmpty(language) ? "th" : language.ToLower();
+
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = language == "th" ? "ข้อมูลที่ส่งมาไม่ถูกต้อง" : "Invalid input data.",
+        //            errors = ModelState
+        //        });
+        //    }
+
+        //    try
+        //    {
+
+        //        var existingEmails = new List<string>();
+        //        foreach (var resource in resources)
+        //        {
+        //            if (await _userQuery.CheckEmailExist(resource.email))
+        //            {
+        //                existingEmails.Add(resource.email);
+        //            }
+        //        }
+
+        //        if (existingEmails.Any())
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = language == "th" ? "มีอีเมลบางรายการที่ใช้งานแล้ว" : "Some emails are already in use.",
+        //                errors = existingEmails.Select(email => new
+        //                {
+        //                    th = $"{email}",
+        //                    en = $"Email {email} already exists in the system."
+        //                }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
+        //            });
+        //        }
+
+        //        var existingTeacherCode = new List<string>();
+        //        foreach (var resource in resources)
+        //        {
+        //            if (await _userQuery.CheckTeacherCodeExist(resource.teacher_code))
+        //            {
+        //                existingTeacherCode.Add(resource.teacher_code);
+        //            }
+        //        }
+
+        //        if (existingTeacherCode.Any())
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = language == "th" ? "มีรหัสอาจารย์ถูกใช้งานแล้ว" : "Some TeacherCode are already in use.",
+        //                errors = existingTeacherCode.Select(teacher_code => new
+        //                {
+        //                    th = $"{teacher_code}",
+        //                    en = $"{teacher_code}"
+        //                }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
+        //            });
+        //        }
+
+        //        // Insert users
+        //        foreach (var resource in resources)
+        //        {
+        //            resource.email = resource.email?.Trim();
+        //            resource.teacher_code = resource.teacher_code?.Trim();
+        //            resource.prefix = resource.prefix?.Trim();
+        //            resource.firstname = resource.firstname?.Trim();
+        //            resource.lastname = resource.lastname?.Trim();
+        //            resource.role = resource.role?.Trim();
+        //            resource.create_by = resource.create_by?.Trim();
+
+        //            resource.password = _encryptService.EncryptPassword(resource.teacher_code);
+        //            resource.create_date = DateTime.Now;
+        //            resource.active_status = "active";
+
+        //            await _userQuery.InsertUser(resource);
+        //        }
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            message = language == "th" ? "บันทึกข้อมูลสำเร็จ" : "All users inserted successfully.",
+        //            data = resources
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = language == "th" ? "เกิดข้อผิดพลาด" : "An error occurred",
+        //            error = ex.Message
+        //        });
+        //    }
+        //}
+
         [HttpPost("InsertUser")]
         public async Task<IActionResult> InsertUser([FromBody] List<UserResource> resources, [FromQuery] string language = "th")
         {
@@ -71,56 +171,89 @@ namespace ScoreManagement.Controllers
 
             try
             {
-
                 var existingEmails = new List<string>();
+                var existingTeacherCode = new List<string>();
+                var bothDuplicateData = new List<UserResource>();
+
                 foreach (var resource in resources)
                 {
+                    // ตรวจสอบอีเมลซ้ำ
                     if (await _userQuery.CheckEmailExist(resource.email))
                     {
                         existingEmails.Add(resource.email);
                     }
-                }
 
-                if (existingEmails.Any())
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = language == "th" ? "มีอีเมลบางรายการที่ใช้งานแล้ว" : "Some emails are already in use.",
-                        errors = existingEmails.Select(email => new
-                        {
-                            th = $"{email}",
-                            en = $"Email {email} already exists in the system."
-                        }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
-                    });
-                }
-
-                var existingTeacherCode = new List<string>();
-                foreach (var resource in resources)
-                {
+                    // ตรวจสอบรหัสอาจารย์ซ้ำ
                     if (await _userQuery.CheckTeacherCodeExist(resource.teacher_code))
                     {
                         existingTeacherCode.Add(resource.teacher_code);
                     }
+
+                    // ตรวจสอบกรณีที่มีทั้งอีเมลและรหัสอาจารย์ซ้ำ
+                    if (await _userQuery.CheckEmailExist(resource.email) && await _userQuery.CheckTeacherCodeExist(resource.teacher_code))
+                    {
+                        bothDuplicateData.Add(resource);
+                    }
                 }
 
-                if (existingTeacherCode.Any())
+                // แยกข้อมูลที่ไม่ซ้ำ
+                var nonDuplicateData = resources.Where(r =>
+                    !existingEmails.Contains(r.email) && !existingTeacherCode.Contains(r.teacher_code)).ToList();
+
+                // ส่งข้อมูลกลับไปยัง frontend
+                if (nonDuplicateData.Any())
+                {
+                    var existingDataMessage = new
+                    {
+                        success = true,
+                        message = language == "th" ? "ข้อมูลที่สามารถบันทึกได้" : "Valid Data Found",
+                        validResources = nonDuplicateData.Select(r => new
+                        {
+                            r.email,
+                            r.teacher_code,
+                            r.prefix,
+                            r.firstname,
+                            r.lastname,
+                            r.role,
+                            r.create_by // Add other necessary fields here
+                        }).ToList(),
+                        existingEmails,
+                        existingTeacherCode,
+                        bothDuplicateData
+                    };
+
+                    return Ok(existingDataMessage);
+                }
+                else
                 {
                     return BadRequest(new
                     {
                         success = false,
-                        message = language == "th" ? "มีรหัสอาจารย์ถูกใช้งานแล้ว" : "Some TeacherCode are already in use.",
-                        errors = existingTeacherCode.Select(teacher_code => new
-                        {
-                            th = $"{teacher_code}",
-                            en = $"{teacher_code}"
-                        }).Select(e => e.GetType().GetProperty(language).GetValue(e).ToString())
+                        message = language == "th" ? "ไม่มีข้อมูลที่สามารถบันทึกได้" : "No valid data",
+                        errors = existingEmails.Select(email => $"{email}")
                     });
                 }
-
-                // Insert users
-                foreach (var resource in resources)
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
                 {
+                    success = false,
+                    message = language == "th" ? "เกิดข้อผิดพลาด" : "An error occurred",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+        [HttpPost("SaveValidUsers")]
+        public async Task<IActionResult> SaveValidUsers([FromBody] List<UserResource> validResources, [FromQuery] string language = "th")
+        {
+            try
+            {
+                foreach (var resource in validResources)
+                {
+                    // Trim and add additional information as needed
                     resource.email = resource.email?.Trim();
                     resource.teacher_code = resource.teacher_code?.Trim();
                     resource.prefix = resource.prefix?.Trim();
@@ -129,10 +262,12 @@ namespace ScoreManagement.Controllers
                     resource.role = resource.role?.Trim();
                     resource.create_by = resource.create_by?.Trim();
 
+                    // Encrypt password and set other necessary fields
                     resource.password = _encryptService.EncryptPassword(resource.teacher_code);
                     resource.create_date = DateTime.Now;
                     resource.active_status = "active";
 
+                    // Insert into the database
                     await _userQuery.InsertUser(resource);
                 }
 
@@ -140,7 +275,7 @@ namespace ScoreManagement.Controllers
                 {
                     success = true,
                     message = language == "th" ? "บันทึกข้อมูลสำเร็จ" : "All users inserted successfully.",
-                    data = resources
+                    data = validResources
                 });
             }
             catch (Exception ex)
@@ -148,7 +283,7 @@ namespace ScoreManagement.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = language == "th" ? "เกิดข้อผิดพลาด" : "An error occurred",
+                    message = language == "th" ? "เกิดข้อผิดพลาดในการบันทึกข้อมูล" : "An error occurred while saving data",
                     error = ex.Message
                 });
             }
