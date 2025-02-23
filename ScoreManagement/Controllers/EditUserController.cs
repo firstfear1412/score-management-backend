@@ -230,7 +230,11 @@ namespace ScoreManagement.Controllers
                     {
                         success = false,
                         message = language == "th" ? "ไม่มีข้อมูลที่สามารถบันทึกได้" : "No valid data",
-                        errors = existingEmails.Select(email => $"{email}")
+                        errors = new
+                        {
+                            emails = existingEmails,
+                            teacher_codes = existingTeacherCode
+                        }
                     });
                 }
             }
