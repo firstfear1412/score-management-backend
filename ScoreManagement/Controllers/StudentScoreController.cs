@@ -78,7 +78,7 @@ namespace ScoreManagement.Controllers
                         missingFields.Add("Section must be greater than 0.");
                 }
 
-                // ตรวจสอบ EmailDetail
+                // ตรวจสอบ StudentDetail
                 if (resource.data == null)
                 {
                     missingFields.Add("Email resource is required.");
@@ -89,18 +89,21 @@ namespace ScoreManagement.Controllers
                     Parallel.ForEach(resource.data, student =>
                     {
                         List<string> localErrors = new List<string>();
-
-                        if (
-                        string.IsNullOrWhiteSpace(student.seat_no)
-                        ||string.IsNullOrWhiteSpace(student.student_id)
-                        ||string.IsNullOrWhiteSpace(student.prefix)
-                        ||string.IsNullOrWhiteSpace(student.firstname)
-                        ||string.IsNullOrWhiteSpace(student.lastname)
-                        ||string.IsNullOrWhiteSpace(student.major_code)
-                        ||string.IsNullOrWhiteSpace(student.email)
-                        ) {
-                            localErrors.Add($"Format invalid for student ID {student.student_id ?? "Unknown"}.");
-                        } 
+                        // ตรวจสอบแต่ละฟิลด์และเพิ่ม error message แบบเฉพาะเจาะจง
+                        if (string.IsNullOrWhiteSpace(student.seat_no))
+                            localErrors.Add($"Seat No is required for student ID {student.student_id ?? "Unknown"}.");
+                        //if (string.IsNullOrWhiteSpace(student.prefix))
+                        //    localErrors.Add($"Prefix is required for student ID {student.student_id ?? "Unknown"}.");
+                        if (string.IsNullOrWhiteSpace(student.student_id))
+                            localErrors.Add("Student ID is required.");
+                        if (string.IsNullOrWhiteSpace(student.firstname))
+                            localErrors.Add($"Firstname is required for student ID {student.student_id ?? "Unknown"}.");
+                        //if (string.IsNullOrWhiteSpace(student.lastname))
+                        //    localErrors.Add($"Lastname is required for student ID {student.student_id ?? "Unknown"}.");
+                        if (string.IsNullOrWhiteSpace(student.major_code))
+                            localErrors.Add($"Major Code is required for student ID {student.student_id ?? "Unknown"}.");
+                        if (string.IsNullOrWhiteSpace(student.email))
+                            localErrors.Add($"Email is required for student ID {student.student_id ?? "Unknown"}.");
 
                         if (localErrors.Any())
                         {
@@ -138,6 +141,7 @@ namespace ScoreManagement.Controllers
                 {
                     isSuccess = flg;
                     message = "All student scores uploaded successfully.";
+                    _webEvent.WriteLogInfo(resource.username!, message, pathBase);
                 }
                 else
                 {
@@ -149,6 +153,8 @@ namespace ScoreManagement.Controllers
                     {
                         { "studentId_List", failedIds }
                     };
+                    _webEvent.WriteLogInfo(resource.username!, message, pathBase);
+                    throw new Exception(message);
                 }
             }
             catch (Exception ex)
@@ -246,8 +252,6 @@ namespace ScoreManagement.Controllers
 
                 // แบ่ง studentIds ออกเป็น batches ตาม maxDegreeOfParallelism
                 int maxDegreeOfParallelism = 10; // จำนวนงานพร้อมกันในแต่ละ batch
-
-                //var studentIds = Enumerable.Range(1, 1000).Select(i => $"STU{i:D3}").ToList(); // สมมุติ 10 รายการ
                 
                 var batches = resource.student_id!
                     .Select((id, index) => new { id, index })
@@ -286,7 +290,7 @@ namespace ScoreManagement.Controllers
                             // 5. If email is sent successfully, update send_status to success
                             if (isSent)
                             {
-                                await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 3);
+                                //await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 3);
                                 //successCount++;
                                 Interlocked.Increment(ref successCount);
                             }
@@ -298,7 +302,7 @@ namespace ScoreManagement.Controllers
                         catch (Exception ex)
                         {
                             sendFailStudentDetails[studentId] = ex.Message;
-                            await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 2, ex.Message);
+                            //await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 2, ex.Message);
                             //failCount++;
                             Interlocked.Increment(ref failCount);
                             //message = ex.Message; // Store the error message
@@ -313,20 +317,7 @@ namespace ScoreManagement.Controllers
                     await _progressHub.Clients.All.SendAsync("ReceiveProgress", successCount, failCount);
                 }
 
-
-
-                // Set success flag if there are no failures
-                if (sendFailStudentDetails.Count > 0)
-                {
-                    var errorDetails = string.Join("; ", sendFailStudentDetails.Select(x => $"{x.Key}: {x.Value}"));
-                    message = $"Failed to send email to the following students: {errorDetails}";
-                }
-                else
-                {
-                    isSuccess = true;
-                    message = "Emails sent successfully";
-                }
-
+                // insert notify and send event to client
                 var data = new
                 {
                     subject_id = resource.SubjectDetail!.subject_id,
@@ -348,6 +339,20 @@ namespace ScoreManagement.Controllers
                     await _notifyHub.Clients.Group(resource.username).SendAsync("ReceiveNotification", JsonConvert.SerializeObject(notifyResponse));
                 }
 
+                // Set success flag if there are no failures
+                if (sendFailStudentDetails.Count > 0)
+                {
+                    var errorDetails = string.Join("; ", sendFailStudentDetails.Select(x => $"{x.Key}: {x.Value}"));
+                    message = $"Failed to send email to the following students: {errorDetails}";
+                    _webEvent.WriteLogInfo(resource.username!, message, pathBase);
+                    throw new Exception(message);
+                }
+                else
+                {
+                    isSuccess = true;
+                    message = "Emails sent successfully";
+                    _webEvent.WriteLogInfo(resource.username!, $"{message} : {data}", pathBase);
+                }
 
             }
             catch (Exception ex)
