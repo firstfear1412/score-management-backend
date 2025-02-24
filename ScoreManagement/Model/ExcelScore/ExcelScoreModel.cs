@@ -34,11 +34,14 @@
         public decimal? MinScore { get; set; }
         public decimal? MaxScore { get; set; }
         public double? StandardDeviation { get; set; }
-        public int? Sum0_9 { get; set; }
-        public int? Sum10_19 { get; set; }
-        public int? Sum20_29 { get; set; }
-        public int? Sum30_39 { get; set; }
-        public int? Count40Plus { get; set; }
+
+        public int? Greater_than_avg { get; set; }
+        public int? Lower_than_avg { get; set; }
+        //public int? Sum0_9 { get; set; }
+        //public int? Sum10_19 { get; set; }
+        //public int? Sum20_29 { get; set; }
+        //public int? Sum30_39 { get; set; }
+        //public int? Count40Plus { get; set; }
     }
 
     public class ExcelScoreRequest

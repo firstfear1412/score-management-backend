@@ -160,64 +160,78 @@ namespace ScoreManagement.Query.ExcelScore
                                         @section NVARCHAR(MAX) = @p_section,
 	                                    @score_type NVARCHAR(50) = @p_score_type;
 
+                                    WITH AverageScores AS (
+                                        SELECT 
+                                            sys_subject_no,
+                                            AVG(
+                                                CASE 
+                                                    WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
+                                                    WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
+                                                    WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
+                                                    WHEN @score_type = 'คะแนนรวม' THEN
+                                                    COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                                END
+                                            ) AS avg_score
+                                        FROM subjectscore
+                                        WHERE active_status = 'active'
+                                        GROUP BY sys_subject_no
+                                    )
                                     SELECT
-                                           s.subject_id AS รหัสวิชา,
-                                           s.subject_name AS ชื่อวิชา,
-                                           shh.academic_year AS ปีการศึกษา,
-                                           shh.semester AS ภาคเรียน,
-                                           shh.section AS หมู่เรียน,
-                                           CASE 
-                                               WHEN @score_type = 'คะแนนรวม' THEN 'คะแนนรวม'
-                                               WHEN @score_type = 'คะแนนปลายภาค' THEN 'คะแนนปลายภาค'
-                                               WHEN @score_type = 'คะแนนกลางภาค' THEN 'คะแนนกลางภาค'
-                                               WHEN @score_type = 'คะแนนระหว่างเรียน' THEN 'คะแนนระหว่างเรียน'
-                                           END AS ประเภทคะแนน,
-                                           COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,  -- นับจำนวนของนิสิตที่ไม่ซ้ำ
-                                           ROUND(CONVERT(Decimal(10,2), AVG(score)), 2) AS คะแนนเฉลี่ย,
-                                           ROUND(MIN(score), 2) AS คะแนนต่ำสุด,
-                                           ROUND(MAX(score), 2) AS คะแนนสูงสุด,
-                                           ROUND(STDEV(score), 2) AS ค่าเบี่ยงเบนมาตรฐาน,
-                                           COUNT(DISTINCT CASE WHEN ss.score >= 0 AND ss.score < 10 THEN ss.student_id END) AS sum_0_9,  -- นับนิสิตในช่วงคะแนน 0-9
-                                           COUNT(DISTINCT CASE WHEN ss.score >= 10 AND ss.score < 20 THEN ss.student_id END) AS sum_10_19,  -- นับนิสิตในช่วงคะแนน 10-19
-                                           COUNT(DISTINCT CASE WHEN ss.score >= 20 AND ss.score < 30 THEN ss.student_id END) AS sum_20_29,  -- นับนิสิตในช่วงคะแนน 20-29
-                                           COUNT(DISTINCT CASE WHEN ss.score >= 30 AND ss.score < 40 THEN ss.student_id END) AS sum_30_39,  -- นับนิสิตในช่วงคะแนน 30-39
-                                           COUNT(DISTINCT CASE WHEN ss.score >= 40 THEN ss.student_id END) AS count_40_plus  -- นับนิสิตในช่วงคะแนน 40 ขึ้นไป
-                                       FROM 
-                                           (SELECT 
-                                               sys_subject_no, 
-                                               student_id, 
-                                               CASE 
-                                                   WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
-                                                   WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
-                                                   WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
-                                                   WHEN @score_type = 'คะแนนรวม' THEN 
-                                                       COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
-                                               END AS score
-                                           FROM subjectscore
-                                           WHERE active_status = 'active') ss
-                                       JOIN 
-                                           (SELECT 
-                                               sh.sys_subject_no, 
-                                               sh.subject_id, 
-                                               yrs.byte_desc_th AS academic_year,
-                                               sem.byte_desc_th AS semester, 
-                                               sec.byte_desc_th AS section
-                                           FROM SubjectHeader sh
-                                           JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
-                                           JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
-                                           JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh
-                                       ON ss.sys_subject_no = shh.sys_subject_no
-                                       JOIN 
-                                           (SELECT subject_id, subject_name 
-                                           FROM Subject
-                                           WHERE active_status = 'active') s
-                                       ON s.subject_id = shh.subject_id
-                                       WHERE 1=1
-                                           AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
-                                           AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
-                                           AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
-                                           AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
-                                       GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section;
+                                        s.subject_id AS รหัสวิชา,
+                                        s.subject_name AS ชื่อวิชา,
+                                        shh.academic_year AS ปีการศึกษา,
+                                        shh.semester AS ภาคเรียน,
+                                        shh.section AS หมู่เรียน,
+                                        CASE 
+                                            WHEN @score_type = 'คะแนนรวม' THEN 'คะแนนรวม'
+                                            WHEN @score_type = 'คะแนนปลายภาค' THEN 'คะแนนปลายภาค'
+                                            WHEN @score_type = 'คะแนนกลางภาค' THEN 'คะแนนกลางภาค'
+                                            WHEN @score_type = 'คะแนนระหว่างเรียน' THEN 'คะแนนระหว่างเรียน'
+                                        END AS ประเภทคะแนน,
+                                        COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,
+                                        ROUND(CONVERT(Decimal(10,2), AVG(ss.score)), 2) AS คะแนนเฉลี่ย,
+                                        ROUND(MIN(ss.score), 2) AS คะแนนต่ำสุด,
+                                        ROUND(MAX(ss.score), 2) AS คะแนนสูงสุด,
+                                        ROUND(STDEV(ss.score), 2) AS ค่าเบี่ยงเบนมาตรฐาน,
+                                        SUM(CASE WHEN ss.score > avg.avg_score THEN 1 ELSE 0 END) AS คะแนนมากกว่าค่าเฉลี่ย,
+                                        SUM(CASE WHEN ss.score < avg.avg_score THEN 1 ELSE 0 END) AS คะแนนน้อยกว่าค่าเฉลี่ย
+                                    FROM 
+                                        (SELECT 
+                                            sys_subject_no, 
+                                            student_id, 
+                                            CASE
+                                                WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
+                                                WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
+                                                WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
+                                                WHEN @score_type = 'คะแนนรวม' THEN 
+                                                     COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                            END AS score
+                                        FROM subjectscore
+                                        WHERE active_status = 'active') ss
+                                    JOIN 
+                                        (SELECT 
+                                            sh.sys_subject_no, 
+                                            sh.subject_id, 
+                                            yrs.byte_desc_th AS academic_year,
+                                            sem.byte_desc_th AS semester, 
+                                            sec.byte_desc_th AS section
+                                        FROM SubjectHeader sh
+                                        JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                        JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                        JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh
+                                    ON ss.sys_subject_no = shh.sys_subject_no
+                                    JOIN 
+                                        (SELECT subject_id, subject_name 
+                                        FROM Subject
+                                        WHERE active_status = 'active') s
+                                    ON s.subject_id = shh.subject_id
+                                    LEFT JOIN AverageScores avg ON ss.sys_subject_no = avg.sys_subject_no
+                                    WHERE 1=1
+                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+                                    GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score;
                 ";
 
                     using (var command = new SqlCommand(query, connection))
@@ -247,11 +261,8 @@ namespace ScoreManagement.Query.ExcelScore
                                         MinScore = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8)),
                                         MaxScore = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9)),
                                         StandardDeviation = reader.IsDBNull(10) ? null : reader.GetDouble(10),
-                                        Sum0_9 = reader.IsDBNull(11) ? null : reader.GetInt32(11),
-                                        Sum10_19 = reader.IsDBNull(12) ? null : reader.GetInt32(12),
-                                        Sum20_29 = reader.IsDBNull(13) ? null : reader.GetInt32(13),
-                                        Sum30_39 = reader.IsDBNull(14) ? null : reader.GetInt32(14),
-                                        Count40Plus = reader.IsDBNull(15) ? null : reader.GetInt32(15),
+                                        Greater_than_avg = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                                        Lower_than_avg = reader.IsDBNull(12) ? null : reader.GetInt32(12),
                                     });
                                 }
                             }

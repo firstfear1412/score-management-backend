@@ -88,11 +88,11 @@ namespace ScoreManagement.Helpers
                 worksheet.Cells[1, 9].Value = "คะแนนต่ำสุด";
                 worksheet.Cells[1, 10].Value = "คะแนนสูงสุด";
                 worksheet.Cells[1, 11].Value = "ค่าเบี่ยงเบนมาตรฐาน";
-                worksheet.Cells[1, 12].Value = "สัดส่วนคะแนนช่วง 0-9";
-                worksheet.Cells[1, 13].Value = "สัดส่วนคะแนนช่วง 10-19";
-                worksheet.Cells[1, 14].Value = "สัดส่วนคะแนนช่วง 20-29";
-                worksheet.Cells[1, 15].Value = "สัดส่วนคะแนนช่วง 30-39";
-                worksheet.Cells[1, 16].Value = "สัดส่วนคะแนนช่วง 40+";
+                worksheet.Cells[1, 12].Value = "คะแนนมากกว่าค่าเฉลี่ย";
+                worksheet.Cells[1, 13].Value = "คะแนนน้อยกว่าค่าเฉลี่ย";
+                //worksheet.Cells[1, 14].Value = "สัดส่วนคะแนนช่วง 20-29";
+                //worksheet.Cells[1, 15].Value = "สัดส่วนคะแนนช่วง 30-39";
+                //worksheet.Cells[1, 16].Value = "สัดส่วนคะแนนช่วง 40+";
 
                 int row = 2;
                 foreach (var item in data)
@@ -108,11 +108,11 @@ namespace ScoreManagement.Helpers
                     worksheet.Cells[row, 9].Value = item.MinScore;
                     worksheet.Cells[row, 10].Value = item.MaxScore;
                     worksheet.Cells[row, 11].Value = item.StandardDeviation;
-                    worksheet.Cells[row, 12].Value = item.Sum0_9;
-                    worksheet.Cells[row, 13].Value = item.Sum10_19;
-                    worksheet.Cells[row, 14].Value = item.Sum20_29;
-                    worksheet.Cells[row, 15].Value = item.Sum30_39;
-                    worksheet.Cells[row, 16].Value = item.Count40Plus;
+                    worksheet.Cells[row, 12].Value = item.Greater_than_avg;
+                    worksheet.Cells[row, 13].Value = item.Lower_than_avg;
+                    //worksheet.Cells[row, 14].Value = item.Sum20_29;
+                    //worksheet.Cells[row, 15].Value = item.Sum30_39;
+                    //worksheet.Cells[row, 16].Value = item.Count40Plus;
 
                     row++;
                 }
