@@ -10,6 +10,8 @@ using ScoreManagement.Interfaces;
 using ScoreManagement.Model.Table;
 using ScoreManagement.Query;
 using Microsoft.Data.SqlClient;
+using ScoreManagement.Model.ExcelScore;
+using ScoreManagement.Interfaces.ExcelScore;
 
 namespace ScoreManagement.Controllers
 {
@@ -63,6 +65,24 @@ namespace ScoreManagement.Controllers
             {
 
                 return StatusCode(500, "An internal error occurred.");
+            }
+        }
+        [HttpPost("GetDashboardTable")]
+        public async Task<IActionResult> GetDashboardTable([FromBody] ExcelScoreRequest request)
+        {
+            try
+            {
+                var data = await _dashboardQuery.GetScoreReportAsync_Other(request);
+
+                if(data == null || data.Count == 0)
+                {
+                    return NotFound("No data found");
+                }
+                return Ok(data);
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ScoreManagement.Entity;
 using ScoreManagement.Interfaces.Dashboard;
 using ScoreManagement.Model;
+using ScoreManagement.Model.ExcelScore;
 using ScoreManagement.Model.ScoreAnnoucement;
 
 using static DashboardStatisticsResponse;
@@ -510,9 +511,10 @@ namespace ScoreManagement.Query.Dashboard
                     responseList.Add(new { StudentScore = wrapper });
                 }
             }
-            catch (Exception ex) { 
+            catch (Exception ex)
+            {
 
-            Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.Message);
             }
 
             return responseList;
@@ -579,6 +581,139 @@ namespace ScoreManagement.Query.Dashboard
                 throw new Exception("An unexpected error occurred.", ex);
             }
             return subjects;
+        }
+        public async Task<List<ExcelScoreModel_Other>> GetScoreReportAsync_Other(ExcelScoreRequest request)
+        {
+            var results = new List<ExcelScoreModel_Other>();
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    string query = @"
+                                    DECLARE @subject_id NVARCHAR(MAX) = @p_subject_id,
+	                                    @academic_year NVARCHAR(MAX) = @p_academic_year,
+	                                    @semester NVARCHAR(MAX) = @p_semester,
+                                        @section NVARCHAR(MAX) = @p_section,
+	                                    @score_type NVARCHAR(50) = @p_score_type;
+
+                                    WITH AverageScores AS (
+                                        SELECT 
+                                            sys_subject_no,
+                                            AVG(
+                                                CASE 
+                                                    WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
+                                                    WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
+                                                    WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
+                                                    WHEN @score_type = 'คะแนนรวม' THEN
+                                                    COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                                END
+                                            ) AS avg_score
+                                        FROM subjectscore
+                                        WHERE active_status = 'active'
+                                        GROUP BY sys_subject_no
+                                    )
+                                    SELECT
+                                        s.subject_id AS รหัสวิชา,
+                                        s.subject_name AS ชื่อวิชา,
+                                        shh.academic_year AS ปีการศึกษา,
+                                        shh.semester AS ภาคเรียน,
+                                        shh.section AS หมู่เรียน,
+                                        CASE 
+                                            WHEN @score_type = 'คะแนนรวม' THEN 'คะแนนรวม'
+                                            WHEN @score_type = 'คะแนนปลายภาค' THEN 'คะแนนปลายภาค'
+                                            WHEN @score_type = 'คะแนนกลางภาค' THEN 'คะแนนกลางภาค'
+                                            WHEN @score_type = 'คะแนนระหว่างเรียน' THEN 'คะแนนระหว่างเรียน'
+                                        END AS ประเภทคะแนน,
+                                        COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,
+                                        ROUND(CONVERT(Decimal(10,2), AVG(ss.score)), 2) AS คะแนนเฉลี่ย,
+                                        ROUND(MIN(ss.score), 2) AS คะแนนต่ำสุด,
+                                        ROUND(MAX(ss.score), 2) AS คะแนนสูงสุด,
+                                        ROUND(STDEV(ss.score), 2) AS ค่าเบี่ยงเบนมาตรฐาน,
+                                        SUM(CASE WHEN ss.score > avg.avg_score THEN 1 ELSE 0 END) AS คะแนนมากกว่าค่าเฉลี่ย,
+                                        SUM(CASE WHEN ss.score < avg.avg_score THEN 1 ELSE 0 END) AS คะแนนน้อยกว่าค่าเฉลี่ย
+                                    FROM 
+                                        (SELECT 
+                                            sys_subject_no, 
+                                            student_id, 
+                                            CASE
+                                                WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
+                                                WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
+                                                WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
+                                                WHEN @score_type = 'คะแนนรวม' THEN 
+                                                     COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                            END AS score
+                                        FROM subjectscore
+                                        WHERE active_status = 'active') ss
+                                    JOIN 
+                                        (SELECT 
+                                            sh.sys_subject_no, 
+                                            sh.subject_id, 
+                                            yrs.byte_desc_th AS academic_year,
+                                            sem.byte_desc_th AS semester, 
+                                            sec.byte_desc_th AS section
+                                        FROM SubjectHeader sh
+                                        JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                        JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                        JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section') shh
+                                    ON ss.sys_subject_no = shh.sys_subject_no
+                                    JOIN 
+                                        (SELECT subject_id, subject_name 
+                                        FROM Subject
+                                        WHERE active_status = 'active') s
+                                    ON s.subject_id = shh.subject_id
+                                    LEFT JOIN AverageScores avg ON ss.sys_subject_no = avg.sys_subject_no
+                                    WHERE 1=1
+                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+                                    GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score;
+                ";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@p_subject_id", string.IsNullOrEmpty(request.subject_id) ? DBNull.Value : (object)request.subject_id);
+                        command.Parameters.AddWithValue("@p_academic_year", string.IsNullOrEmpty(request.academic_year) ? DBNull.Value : (object)request.academic_year);
+                        command.Parameters.AddWithValue("@p_semester", string.IsNullOrEmpty(request.semester) ? DBNull.Value : (object)request.semester);
+                        command.Parameters.AddWithValue("@p_section", string.IsNullOrEmpty(request.section) ? DBNull.Value : (object)request.section);
+                        command.Parameters.AddWithValue("@p_score_type", string.IsNullOrEmpty(request.score_type) ? DBNull.Value : (object)request.score_type);
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    results.Add(new ExcelScoreModel_Other
+                                    {
+                                        SubjectId = reader.IsDBNull(0) ? null : reader.GetString(0),
+                                        SubjectName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                        AcademicYear = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                        Semester = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                        Section = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                        ScoreType = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                        StudentCount = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                                        AverageScore = reader.IsDBNull(7) ? null : Convert.ToDecimal(reader.GetValue(7)),
+                                        MinScore = reader.IsDBNull(8) ? null : Convert.ToDecimal(reader.GetValue(8)),
+                                        MaxScore = reader.IsDBNull(9) ? null : Convert.ToDecimal(reader.GetValue(9)),
+                                        StandardDeviation = reader.IsDBNull(10) ? null : reader.GetDouble(10),
+                                        Greater_than_avg = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                                        Lower_than_avg = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("There is an error.", ex);
+            }
+            return results;
         }
     }
 }
