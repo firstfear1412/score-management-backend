@@ -355,10 +355,22 @@ namespace ScoreManagement.Query
                     // สร้าง query SQL แบบ dynamic
                     string query = $@"
                         UPDATE et
-                        SET active_status = @active_status
+                        SET et.active_status = @active_status,
+                            et.update_date = GETDATE()
                         FROM [EmailTemplate] et
-                        JOIN [UserEmailTemplate] ut ON ut.template_id = et.template_id AND ut.active_status = 'active'
-                        WHERE et.template_id = @template_id AND ut.username = @username AND et.active_status = 'active'
+                        JOIN [UserEmailTemplate] ut ON ut.template_id = et.template_id 
+                            AND ut.active_status = 'active'
+                        WHERE et.template_id = @template_id 
+                            AND ut.username = @username
+                            AND et.active_status = 'active'
+                            AND et.is_private = 1;
+
+                        UPDATE [UserEmailTemplate]
+                        SET active_status = @active_status,
+                            update_date = GETDATE()
+                        WHERE template_id = @template_id 
+                            AND username = @username
+                            AND active_status = 'active';
                     ";
 
                     using (var command = new SqlCommand(query, connection))
@@ -477,6 +489,7 @@ namespace ScoreManagement.Query
             int failCount = 0;
             int maxConcurrentTasks = 5; // Limit the number of concurrent tasks
             SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrentTasks);
+            //Random random = new Random(); // ใช้สำหรับสุ่ม error
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync(); // เปิด Connection ครั้งเดียว
@@ -507,13 +520,20 @@ namespace ScoreManagement.Query
                                 {
                                     await ExcuteStudentQuery(connection, transaction, student, username);
                                     await ExcuteSubjectScoreQuery(connection, transaction, student, sysSubjectNo, username);
+                                    //await Task.Delay(1000); // หน่วงเวลา 1 วินาที (จำลองการทำงาน)
+
+                                    // สุ่มให้ 10% ของ student ล้มเหลว
+                                    //if (random.NextDouble() < 0.3)
+                                    //{
+                                    //    throw new Exception("Random error occurred.");
+                                    //}
 
                                     Interlocked.Increment(ref successCount);
                                     hasSuccess = true;
                                 }
                                 catch (Exception ex)
                                 {
-                                    failedStudentIds.Add(student.student_id);
+                                    failedStudentIds.Add(student.student_id!);
                                     Interlocked.Increment(ref failCount);
                                 }
                             });
