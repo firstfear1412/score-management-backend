@@ -155,21 +155,24 @@ namespace ScoreManagement.Query.ExcelScore
 
                     string query = @"
                                     DECLARE @subject_id NVARCHAR(MAX) = @p_subject_id,
-	                                    @academic_year NVARCHAR(MAX) = @p_academic_year,
-	                                    @semester NVARCHAR(MAX) = @p_semester,
-                                        @section NVARCHAR(MAX) = @p_section,
-	                                    @score_type NVARCHAR(50) = @p_score_type;
+                                            @academic_year NVARCHAR(MAX) = @p_academic_year,
+                                            @semester NVARCHAR(MAX) = @p_semester,
+                                            @section NVARCHAR(MAX) = @p_section,
+                                            @score_type NVARCHAR(50) = @p_score_type;
 
                                     WITH AverageScores AS (
                                         SELECT 
                                             sys_subject_no,
                                             AVG(
                                                 CASE 
-                                                    WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
-                                                    WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
-                                                    WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
-                                                    WHEN @score_type = 'คะแนนรวม' THEN
-                                                    COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                                    WHEN @score_type = 'คะแนนปลายภาค' THEN final_score
+                                                    WHEN @score_type = 'คะแนนกลางภาค' THEN midterm_score
+                                                    WHEN @score_type = 'คะแนนระหว่างเรียน' THEN accumulated_score
+                                                    WHEN @score_type = 'คะแนนรวม' OR @score_type = '' THEN 
+                                                        COALESCE(accumulated_score, 0) + 
+                                                        COALESCE(midterm_score, 0) + 
+                                                        COALESCE(final_score, 0)
+                                                    ELSE NULL
                                                 END
                                             ) AS avg_score
                                         FROM subjectscore
@@ -183,10 +186,8 @@ namespace ScoreManagement.Query.ExcelScore
                                         shh.semester AS ภาคเรียน,
                                         shh.section AS หมู่เรียน,
                                         CASE 
-                                            WHEN @score_type = 'คะแนนรวม' THEN 'คะแนนรวม'
-                                            WHEN @score_type = 'คะแนนปลายภาค' THEN 'คะแนนปลายภาค'
-                                            WHEN @score_type = 'คะแนนกลางภาค' THEN 'คะแนนกลางภาค'
-                                            WHEN @score_type = 'คะแนนระหว่างเรียน' THEN 'คะแนนระหว่างเรียน'
+                                            WHEN @score_type = '' THEN 'คะแนนรวม'
+                                            ELSE @score_type 
                                         END AS ประเภทคะแนน,
                                         COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,
                                         ROUND(CONVERT(Decimal(10,2), AVG(ss.score)), 2) AS คะแนนเฉลี่ย,
@@ -200,14 +201,18 @@ namespace ScoreManagement.Query.ExcelScore
                                             sys_subject_no, 
                                             student_id, 
                                             CASE
-                                                WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
-                                                WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
-                                                WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
-                                                WHEN @score_type = 'คะแนนรวม' THEN 
-                                                     COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
+                                                WHEN @score_type = 'คะแนนปลายภาค' THEN final_score
+                                                WHEN @score_type = 'คะแนนกลางภาค' THEN midterm_score
+                                                WHEN @score_type = 'คะแนนระหว่างเรียน' THEN accumulated_score
+                                                WHEN @score_type = 'คะแนนรวม' OR @score_type = '' THEN 
+                                                    COALESCE(accumulated_score, 0) + 
+                                                    COALESCE(midterm_score, 0) + 
+                                                    COALESCE(final_score, 0)
+                                                ELSE NULL
                                             END AS score
                                         FROM subjectscore
-                                        WHERE active_status = 'active') ss
+                                        WHERE active_status = 'active'
+                                        ) ss
                                     JOIN 
                                         (SELECT 
                                             sh.sys_subject_no, 
@@ -232,6 +237,7 @@ namespace ScoreManagement.Query.ExcelScore
                                         AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
                                         AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
                                     GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score;
+
                 ";
 
                     using (var command = new SqlCommand(query, connection))

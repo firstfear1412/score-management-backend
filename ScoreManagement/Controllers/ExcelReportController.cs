@@ -4,6 +4,7 @@ using ScoreManagement.Interfaces.ExcelScore;
 using ScoreManagement.Helpers;
 using ScoreManagement.Model.ExcelScore;
 using ScoreManagement.Controllers.Base;
+using System.Collections.Generic;
 
 namespace ScoreManagement.Controllers
 {
@@ -21,33 +22,55 @@ namespace ScoreManagement.Controllers
         }
 
         [HttpPost("CreateExcelScore")]
-        public async Task<IActionResult> CreateExcelScore([FromBody] ExcelScoreRequest request)
+        public async Task<IActionResult> CreateExcelScore([FromBody] List<ExcelScoreRequest> requests)
         {
+            var allData_total = new List<ExcelScoreModel>();
+            var allData_other = new List<ExcelScoreModel_Other>();
 
-            if(request.score_type == "คะแนนรวม") 
+            foreach (var request in requests)
             {
-                var data = await _excel_score.GetScoreReportAsync(request);
-
-                if (data == null || !data.Any())
+                if (request.score_type == "คะแนนรวม")
                 {
-                    return NotFound("No data found.");
+                    var data = await _excel_score.GetScoreReportAsync(request);
+                    if (data != null && data.Any())
+                    {
+                        allData_total.AddRange(data);
+                    }
+                    else
+                    {
+                        return NotFound(new { error = $"No data found for request: {request.subject_id}" });
+                    }
                 }
-
-                string base64Excel = ExcelHelper.GenerateExcelBase64(data);
-                return Ok(new { file = base64Excel });
+                else
+                {
+                    var data = await _excel_score.GetScoreReportAsync_Other(request);
+                    if (data != null && data.Any())
+                    {
+                        allData_other.AddRange(data); 
+                    }
+                    else
+                    {
+                        return NotFound(new { error = $"No data found for request: {request.subject_id}" });
+                    }
+                }
             }
-            else
+
+            string base64ExcelTotal = null;
+            if (allData_total.Any())
             {
-                var data = await _excel_score.GetScoreReportAsync_Other(request);
-
-                if (data == null || !data.Any())
-                {
-                    return NotFound("No data found.");
-                }
-
-                string base64Excel = ExcelHelper.GenerateExcelBase64_Other(data);
-                return Ok(new { file = base64Excel });
+                base64ExcelTotal = ExcelHelper.GenerateExcelBase64(allData_total);
+                return Ok(new { file = base64ExcelTotal });
             }
+
+            string base64ExcelOther = null;
+            if (allData_other.Any())
+            {
+                base64ExcelOther = ExcelHelper.GenerateExcelBase64_Other(allData_other); 
+                return Ok(new { file = base64ExcelOther });
+            }
+
+            return BadRequest(new { error = "No data to generate Excel." });
         }
+
     }
 }

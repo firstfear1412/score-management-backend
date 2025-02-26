@@ -37,11 +37,20 @@
 
         public int? Greater_than_avg { get; set; }
         public int? Lower_than_avg { get; set; }
-        //public int? Sum0_9 { get; set; }
-        //public int? Sum10_19 { get; set; }
-        //public int? Sum20_29 { get; set; }
-        //public int? Sum30_39 { get; set; }
-        //public int? Count40Plus { get; set; }
+    }
+
+    //public class ExcelScoreRequest
+    //{
+    //    public string? subject_id { get; set; }
+    //    public string? academic_year { get; set; }
+    //    public string? semester { get; set; }
+    //    public string? section { get; set; }
+    //    public string? score_type { get; set; }
+    //}
+
+    public class ExcelScoreRequest_list
+    {
+        public List<SubjectRequest> Subjects { get; set; }
     }
 
     public class ExcelScoreRequest
@@ -52,5 +61,6 @@
         public string? section { get; set; }
         public string? score_type { get; set; }
     }
+
 
 }
