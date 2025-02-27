@@ -27,7 +27,8 @@ namespace ScoreManagement.Query
             string query = $@"
             SELECT byte_code, byte_desc_th, byte_desc_en 
             FROM SystemParam sp 
-            WHERE sp.byte_reference = '{byteReference}';
+            WHERE sp.byte_reference = '{byteReference}'
+            AND sp.active_status = 'active';
         ";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
