@@ -134,36 +134,26 @@ namespace ScoreManagement.Query
             string sqlContext;
             if (resource.role == 2)
             {
-                sqlContext = @"WITH SubjectRanked AS (
-                                SELECT sj.row_id,sj.subject_id, 
-                                       sj.subject_name,
-                                       sl.teacher_code,
-                                       ROW_NUMBER() OVER (PARTITION BY sj.subject_id ORDER BY sj.create_by DESC) AS row_num
-                                FROM Subject sj
-                                INNER JOIN SubjectHeader sh 
-                                    ON sh.subject_id = sj.subject_id 
-                                INNER JOIN (
-                                    SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
-                                    FROM SubjectLecturer
-                                    WHERE active_status = 'active'
-                                    AND (@teacherCode IS NULL OR teacher_code = @teacherCode)
-                                    GROUP BY sys_subject_no
-                                ) sl 
-                                ON sh.sys_subject_no = sl.sys_subject_no
-                            )
-                            SELECT row_id,subject_id, 
-                                   subject_name,
-                                   teacher_code
-                            FROM SubjectRanked
-                            WHERE row_num = 1
-                            ORDER BY row_id DESC";
+                sqlContext = @"						   
+	                         SELECT s.subject_id, s.subject_name FROM SubjectHeader sh
+	                            JOIN Subject s ON sh.subject_id = s.subject_id
+	                            JOIN SubjectLecturer sl ON sh.sys_subject_no = sl.sys_subject_no
+	                            WHERE 1=1
+								AND s.active_status = 'active'
+	                            AND sh.active_status = 'active'
+								AND sl.active_status = 'active'
+	                            AND sl.teacher_code = NULLIF(@teacherCode, '')
+	                            GROUP BY s.subject_id, s.subject_name";
             }
             else
             {
-                sqlContext = @"SELECT MIN(sj.row_id) AS row_id, sj.subject_id, MIN(sj.subject_name) AS subject_name 
-                                FROM Subject sj 
-                                GROUP BY sj.subject_id 
-                                ORDER BY row_id DESC;";
+                sqlContext = @"		                 
+                            SELECT s.subject_id, s.subject_name FROM SubjectHeader sh
+                                JOIN Subject s ON sh.subject_id = s.subject_id
+	                            WHERE 1=1
+							    AND s.active_status = 'active'
+								AND sh.active_status = 'active'
+								GROUP BY s.subject_id, s.subject_name";
             }
             try
             {
