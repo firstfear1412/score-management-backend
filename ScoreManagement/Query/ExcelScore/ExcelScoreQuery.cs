@@ -35,14 +35,14 @@ namespace ScoreManagement.Query.ExcelScore
                                         @section NVARCHAR(MAX) = @p_section,
 	                                    @score_type NVARCHAR(50) = @p_score_type;
 
-                                    SELECT
+                  SELECT
                                         s.subject_id AS รหัสวิชา,
                                         s.subject_name AS ชื่อวิชา,
                                         shh.academic_year AS ปีการศึกษา,
                                         shh.semester AS ภาคเรียน,
                                         shh.section AS หมู่เรียน,
                                         @score_type AS ประเภทคะแนน,
-                                        COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,
+                                        COUNT(ss.student_id) AS จำนวนนิสิต,
                                         ROUND(CONVERT(Decimal(10,2), AVG(ss.score)), 2) AS คะแนนเฉลี่ย,
                                         ROUND(MIN(ss.score), 2) AS คะแนนต่ำสุด,
                                         ROUND(MAX(ss.score), 2) AS คะแนนสูงสุด,
@@ -88,6 +88,13 @@ namespace ScoreManagement.Query.ExcelScore
                                         FROM Subject
                                         WHERE active_status = 'active') s
                                     ON s.subject_id = shh.subject_id
+                                    INNER JOIN (
+									            SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+									            FROM SubjectLecturer ssl
+									            WHERE active_status = 'active'
+									            GROUP BY sys_subject_no
+								               ) sl		
+							        ON shh.sys_subject_no = sl.sys_subject_no
                                     WHERE 1=1
                                         AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
                                         AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
@@ -163,18 +170,18 @@ namespace ScoreManagement.Query.ExcelScore
                                             @teacher_code NVARCHAR(50) = @p_teacher_code;
 
 
-                                   WITH AverageScores AS (
-                                                   SELECT 
-                                                   sys_subject_no,
-                                                   AVG(
-                                                   CASE 
-                                                   WHEN @score_type = 'คะแนนปลายภาค' THEN COALESCE(final_score, 0)
-                                                                                WHEN @score_type = 'คะแนนกลางภาค' THEN COALESCE(midterm_score, 0)
-                                                                                WHEN @score_type = 'คะแนนระหว่างเรียน' THEN COALESCE(accumulated_score, 0)
-                                                                                WHEN @score_type = 'คะแนนรวม' THEN
-                                                                                COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0)
-                                                                            END
-                                                                        ) AS avg_score
+                                    WITH AverageScores AS (
+                                                SELECT 
+                                                sys_subject_no,
+                                                AVG(
+                                                    CASE 
+                                                        WHEN @score_type = 'คะแนนปลายภาค' THEN final_score
+                                                        WHEN @score_type = 'คะแนนกลางภาค' THEN midterm_score
+                                                        WHEN @score_type = 'คะแนนระหว่างเรียน' THEN accumulated_score
+                                                        WHEN @score_type = 'คะแนนรวม' THEN
+                                                        accumulated_score + midterm_score + final_score
+                                                    END
+                                                ) AS avg_score
                                                                     FROM subjectscore
                                                                     WHERE active_status = 'active'
                                                                     GROUP BY sys_subject_no
@@ -191,7 +198,7 @@ namespace ScoreManagement.Query.ExcelScore
                                                                         WHEN @score_type = 'คะแนนกลางภาค' THEN 'คะแนนกลางภาค'
                                                                         WHEN @score_type = 'คะแนนระหว่างเรียน' THEN 'คะแนนระหว่างเรียน'
                                                                     END AS ประเภทคะแนน,
-                                                                    COUNT(DISTINCT ss.student_id) AS จำนวนนิสิต,
+                                                                    COUNT(ss.student_id) AS จำนวนนิสิต,
                                                                     ROUND(CONVERT(Decimal(10,2), AVG(ss.score)), 2) AS คะแนนเฉลี่ย,
                                                                     ROUND(MIN(ss.score), 2) AS คะแนนต่ำสุด,
                                                                     ROUND(MAX(ss.score), 2) AS คะแนนสูงสุด,
@@ -235,13 +242,19 @@ namespace ScoreManagement.Query.ExcelScore
                                                                     WHERE active_status = 'active') s
                                                                 ON s.subject_id = shh.subject_id
                                                                 LEFT JOIN AverageScores avg ON ss.sys_subject_no = avg.sys_subject_no
-			                                                             JOIN SubjectLecturer sl ON shh.sys_subject_no = sl.sys_subject_no
+                                                                INNER JOIN (
+									                                                            SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+									                                                            FROM SubjectLecturer ssl
+									                                                            WHERE active_status = 'active'
+									                                                            AND (@teacher_code IS NULL OR teacher_code = @teacher_code)
+									                                                            GROUP BY sys_subject_no
+								                                                            ) sl		
+							                                                            ON shh.sys_subject_no = sl.sys_subject_no
                                                                 WHERE 1=1
                                                                 AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
                                                                 AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
                                                                 AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
                                                                 AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
-			                                                    AND sl.active_status = 'active'
 			                                                    AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
 				                                                --AND sl.teacher_code = NULLIF(@teacher_code, '')
 			                                                    GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score
