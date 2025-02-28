@@ -35,146 +35,164 @@ namespace ScoreManagement.Query.Dashboard
             Dictionary<string, string> queries = new Dictionary<string, string>
             {
                 { "final_score", @"
-                                 SELECT
-                                    ROUND(MAX(ss.final_score), 2) AS max_final_score, 
-                                    ROUND(MIN(ss.final_score),2) AS min_final_score, 
-                                    ROUND(CONVERT(DECIMAL(10,2), AVG(ss.final_score)), 2) AS avg_final_score, 
-                                    ROUND(STDEV(ss.final_score), 2) AS std_final_score, 
-                                    COUNT(DISTINCT ss.student_id) AS number_student
-                                FROM 
-                                    (SELECT 
-                                        sys_subject_no, 
-                                        student_id, 
-                                        seat_no, 
-                                        accumulated_score, 
-                                        midterm_score, 
-                                        final_score
-                                    FROM subjectscore
-                                    WHERE active_status = 'active') ss
-                                JOIN 
-                                    (SELECT 
-                                        sh.sys_subject_no, 
-                                        sh.subject_id, 
-                                        yrs.byte_desc_th AS academic_year,
-                                        sem.byte_desc_th AS semester, 
-                                        sec.byte_desc_th AS section
-                                    FROM subjectheader sh
-                                    JOIN systemparam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
-                                    JOIN systemparam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
-                                    JOIN systemparam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
-                                    WHERE sh.active_status = 'active') shh
-                                    ON ss.sys_subject_no = shh.sys_subject_no
-                                JOIN 
-                                    (SELECT subject_id, subject_name 
-                                    FROM subject
-                                    WHERE active_status = 'active') s
-                                    ON s.subject_id = shh.subject_id
-                                WHERE 1=1
-                                AND (@subject_id IS NULL OR s.subject_id = NULLIF(@subject_id, ''))
-                                AND (@academic_year IS NULL OR shh.academic_year = NULLIF(@academic_year, ''))
-                                AND (@semester IS NULL OR shh.semester = NULLIF(@semester, ''))
-                                AND (@section IS NULL OR shh.section = NULLIF(@section, ''))
-                                AND (@teacher_code IS NULL OR @teacher_code = '' OR EXISTS (
-                                          SELECT 1 
-                                          FROM SubjectLecturer sl 
-                                          WHERE sl.sys_subject_no = shh.sys_subject_no 
-                                            AND sl.teacher_code = NULLIF(@teacher_code, '')
-                                            AND sl.active_status = 'active'
-                                      )) " },
+                                                         SELECT
+                                                            ROUND(MAX(ss.final_score), 2) AS max_final_score, 
+                                                            ROUND(MIN(ss.final_score),2) AS min_final_score, 
+                                                            ROUND(CONVERT(DECIMAL(10,2), AVG(ss.final_score)), 2) AS avg_final_score, 
+                                                            ROUND(STDEV(ss.final_score), 2) AS std_final_score, 
+                                                            COUNT(ss.student_id) AS number_student
+                                                        FROM 
+                                                            (SELECT 
+                                                                sys_subject_no, 
+                                                                student_id, 
+                                                                seat_no, 
+                                                                accumulated_score, 
+                                                                midterm_score, 
+                                                                final_score
+                                                            FROM subjectscore
+                                             WHERE active_status = 'active') ss
+                                                            JOIN 
+                                                            (SELECT 
+                                                                sh.sys_subject_no, 
+                                                                sh.subject_id, 
+                                                                yrs.byte_desc_th AS academic_year,
+                                                                sem.byte_desc_th AS semester, 
+                                                                sec.byte_desc_th AS section,
+					                                                     sh.active_status
+                                                            FROM SubjectHeader sh
+                                                            JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                                            JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                                            JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
+				                                                     WHERE sh.active_status = 'active') shh
+                                                        ON ss.sys_subject_no = shh.sys_subject_no
+                                                        JOIN 
+                                                            (SELECT subject_id, subject_name 
+                                                            FROM Subject
+                                                            WHERE active_status = 'active') s
+                                                        ON s.subject_id = shh.subject_id
+														INNER JOIN (
+															  SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+															  FROM SubjectLecturer
+															  WHERE active_status = 'active'
+															  AND (@teacher_code IS NULL OR teacher_code = @teacher_code)
+															  GROUP BY sys_subject_no
+														  ) sl		
+														ON shh.sys_subject_no = sl.sys_subject_no
+                                                        WHERE 1=1
+                                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+			                                            --AND sl.active_status = 'active'
+			                                            AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
+				                                        --AND sl.teacher_code = NULLIF(@teacher_code, '')
+			                                            --GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section;" },
 
                 { "midterm_score", @"
-                    SELECT  ROUND(MAX(ss.midterm_score),2) AS MAX_MIDTERM_SCORE, 
-                            ROUND(MIN(ss.midterm_score),2) AS MIN_MIDTERM_SCORE, 
-                            ROUND(CONVERT(DECIMAL(10,2), AVG(ss.midterm_score)),2) AS AVG_MIDTERM_SCORE, 
-                            ROUND(STDEV(ss.midterm_score), 2) AS STD_MIDTERM_SCORE, 
-                            COUNT(DISTINCT ss.student_id) AS number_student
-                                FROM 
-                                    (SELECT 
-                                        sys_subject_no, 
-                                        student_id, 
-                                        seat_no, 
-                                        accumulated_score, 
-                                        midterm_score, 
-                                        final_score
-                                    FROM subjectscore
-                                    WHERE active_status = 'active') ss
-                                JOIN 
-                                    (SELECT 
-                                        sh.sys_subject_no, 
-                                        sh.subject_id, 
-                                        yrs.byte_desc_th AS academic_year,
-                                        sem.byte_desc_th AS semester, 
-                                        sec.byte_desc_th AS section
-                                    FROM subjectheader sh
-                                    JOIN systemparam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
-                                    JOIN systemparam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
-                                    JOIN systemparam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
-                                    WHERE sh.active_status = 'active') shh
-                                    ON ss.sys_subject_no = shh.sys_subject_no
-                                JOIN 
-                                    (SELECT subject_id, subject_name 
-                                    FROM subject
-                                    WHERE active_status = 'active') s
-                                    ON s.subject_id = shh.subject_id
-                                WHERE 1=1
-                                AND (@subject_id IS NULL OR s.subject_id = NULLIF(@subject_id, ''))
-                                AND (@academic_year IS NULL OR shh.academic_year = NULLIF(@academic_year, ''))
-                                AND (@semester IS NULL OR shh.semester = NULLIF(@semester, ''))
-                                AND (@section IS NULL OR shh.section = NULLIF(@section, ''))
-                                AND (@teacher_code IS NULL OR @teacher_code = '' OR EXISTS (
-                                          SELECT 1 
-                                          FROM SubjectLecturer sl 
-                                          WHERE sl.sys_subject_no = shh.sys_subject_no 
-                                            AND sl.teacher_code = NULLIF(@teacher_code, '')
-                                            AND sl.active_status = 'active'
-                                      ))" },
+                                            SELECT  ROUND(MAX(ss.midterm_score),2) AS MAX_MIDTERM_SCORE, 
+                                                    ROUND(MIN(ss.midterm_score),2) AS MIN_MIDTERM_SCORE, 
+                                                    ROUND(CONVERT(DECIMAL(10,2), AVG(ss.midterm_score)),2) AS AVG_MIDTERM_SCORE, 
+                                                    ROUND(STDEV(ss.midterm_score), 2) AS STD_MIDTERM_SCORE, 
+                                                    COUNT(ss.student_id) AS number_student
+                                                        FROM 
+                                                            (SELECT 
+                                                                sys_subject_no, 
+                                                                student_id, 
+                                                                seat_no, 
+                                                                accumulated_score, 
+                                                                midterm_score, 
+                                                                final_score
+                                                            FROM subjectscore
+                                             WHERE active_status = 'active') ss
+                                                            JOIN 
+                                                            (SELECT 
+                                                                sh.sys_subject_no, 
+                                                                sh.subject_id, 
+                                                                yrs.byte_desc_th AS academic_year,
+                                                                sem.byte_desc_th AS semester, 
+                                                                sec.byte_desc_th AS section,
+					                                                     sh.active_status
+                                                            FROM SubjectHeader sh
+                                                            JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                                            JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                                            JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
+				                                                     WHERE sh.active_status = 'active') shh
+                                                        ON ss.sys_subject_no = shh.sys_subject_no
+                                                        JOIN 
+                                                            (SELECT subject_id, subject_name 
+                                                            FROM Subject
+                                                            WHERE active_status = 'active') s
+                                                        ON s.subject_id = shh.subject_id
+														INNER JOIN (
+															  SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+															  FROM SubjectLecturer
+															  WHERE active_status = 'active'
+															  AND (@teacher_code IS NULL OR teacher_code = @teacher_code)
+															  GROUP BY sys_subject_no
+														  ) sl		
+														ON shh.sys_subject_no = sl.sys_subject_no
+                                                        WHERE 1=1
+                                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+			                                            --AND sl.active_status = 'active'
+			                                            AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
+				                                        --AND sl.teacher_code = NULLIF(@teacher_code, '')
+			                                            --GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section;" },
 
                 { "accumulated_score", @"
-                    SELECT ROUND(MAX(ss.accumulated_score),2) AS MAX_ACCUMULATED_SCORE, 
-                           ROUND(MIN(ss.accumulated_score),2) AS MIN_ACCUMULATED_SCORE, 
-                           ROUND(CONVERT(DECIMAL(10,2), AVG(ss.accumulated_score)),2) AS AVG_ACCUMULATED_SCORE, 
-                           ROUND(STDEV(ss.accumulated_score), 2) AS STD_ACCUMULATED_SCORE, 
-                                 COUNT(DISTINCT ss.student_id) AS number_student
-                                FROM 
-                                    (SELECT 
-                                        sys_subject_no, 
-                                        student_id, 
-                                        seat_no, 
-                                        accumulated_score, 
-                                        midterm_score, 
-                                        final_score
-                                    FROM subjectscore
-                                    WHERE active_status = 'active') ss
-                                JOIN 
-                                    (SELECT 
-                                        sh.sys_subject_no, 
-                                        sh.subject_id, 
-                                        yrs.byte_desc_th AS academic_year,
-                                        sem.byte_desc_th AS semester, 
-                                        sec.byte_desc_th AS section
-                                    FROM subjectheader sh
-                                    JOIN systemparam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
-                                    JOIN systemparam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
-                                    JOIN systemparam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
-                                    WHERE sh.active_status = 'active') shh
-                                    ON ss.sys_subject_no = shh.sys_subject_no
-                                JOIN 
-                                    (SELECT subject_id, subject_name 
-                                    FROM subject
-                                    WHERE active_status = 'active') s
-                                    ON s.subject_id = shh.subject_id
-                                WHERE 1=1
-                                AND (@subject_id IS NULL OR s.subject_id = NULLIF(@subject_id, ''))
-                                AND (@academic_year IS NULL OR shh.academic_year = NULLIF(@academic_year, ''))
-                                AND (@semester IS NULL OR shh.semester = NULLIF(@semester, ''))
-                                AND (@section IS NULL OR shh.section = NULLIF(@section, ''))
-                                AND (@teacher_code IS NULL OR @teacher_code = '' OR EXISTS (
-                                          SELECT 1 
-                                          FROM SubjectLecturer sl 
-                                          WHERE sl.sys_subject_no = shh.sys_subject_no 
-                                            AND sl.teacher_code = NULLIF(@teacher_code, '')
-                                            AND sl.active_status = 'active'
-                                      ))" },
+                                            SELECT ROUND(MAX(ss.accumulated_score),2) AS MAX_ACCUMULATED_SCORE, 
+                                                   ROUND(MIN(ss.accumulated_score),2) AS MIN_ACCUMULATED_SCORE, 
+                                                   ROUND(CONVERT(DECIMAL(10,2), AVG(ss.accumulated_score)),2) AS AVG_ACCUMULATED_SCORE, 
+                                                   ROUND(STDEV(ss.accumulated_score), 2) AS STD_ACCUMULATED_SCORE, 
+                                                         COUNT(DISTINCT ss.student_id) AS number_student
+                                                        FROM 
+                                                            (SELECT 
+                                                                sys_subject_no, 
+                                                                student_id, 
+                                                                seat_no, 
+                                                                accumulated_score, 
+                                                                midterm_score, 
+                                                                final_score
+                                                            FROM subjectscore
+                                             WHERE active_status = 'active') ss
+                                                            JOIN 
+                                                            (SELECT 
+                                                                sh.sys_subject_no, 
+                                                                sh.subject_id, 
+                                                                yrs.byte_desc_th AS academic_year,
+                                                                sem.byte_desc_th AS semester, 
+                                                                sec.byte_desc_th AS section,
+					                                                     sh.active_status
+                                                            FROM SubjectHeader sh
+                                                            JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                                            JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                                            JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
+				                                                     WHERE sh.active_status = 'active') shh
+                                                        ON ss.sys_subject_no = shh.sys_subject_no
+                                                        JOIN 
+                                                            (SELECT subject_id, subject_name 
+                                                            FROM Subject
+                                                            WHERE active_status = 'active') s
+                                                        ON s.subject_id = shh.subject_id
+														INNER JOIN (
+															  SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+															  FROM SubjectLecturer
+															  WHERE active_status = 'active'
+															  AND (@teacher_code IS NULL OR teacher_code = @teacher_code)
+															  GROUP BY sys_subject_no
+														  ) sl		
+														ON shh.sys_subject_no = sl.sys_subject_no
+                                                        WHERE 1=1
+                                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+			                                            --AND sl.active_status = 'active'
+			                                            AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
+				                                        --AND sl.teacher_code = NULLIF(@teacher_code, '')
+			                                            --GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section;" },
 
                 {
                     "student_score", @"SELECT 
@@ -259,53 +277,63 @@ namespace ScoreManagement.Query.Dashboard
                                         ss.final_score"
                 },
 
-                { "total_score", @"SELECT
-                                    ROUND(MAX(Total), 2) AS MAX_TOTAL,
-                                    ROUND(MIN(Total), 2) AS MIN_TOTAL,
-									ROUND(CONVERT(DECIMAL(10,2), AVG(Total)), 2) AS AVG_TOTAL,
-                                    ROUND(STDEV(Total), 2) AS STD_TOTAL,
-                                    COUNT(DISTINCT ss.student_id) AS number_student
-                                FROM 
-                                    (SELECT 
-                                        sys_subject_no, 
-                                        student_id,
-                                        accumulated_score, 
-                                        midterm_score, 
-                                        final_score, 
-										ROUND(COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0), 2) AS Total,
-                                        active_status
-                                    FROM SubjectScore
-                                    WHERE active_status = 'active') ss
-                                 JOIN 
-                                    (SELECT 
-                                        sh.sys_subject_no, 
-                                        sh.subject_id, 
-                                        yrs.byte_desc_th AS academic_year,
-                                        sem.byte_desc_th AS semester, 
-                                        sec.byte_desc_th AS section
-                                    FROM subjectheader sh
-                                    JOIN systemparam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
-                                    JOIN systemparam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
-                                    JOIN systemparam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
-                                    WHERE sh.active_status = 'active') shh
-                                    ON ss.sys_subject_no = shh.sys_subject_no
-                                JOIN 
-                                    (SELECT subject_id, subject_name 
-                                    FROM subject
-                                    WHERE active_status = 'active') s
-                                    ON s.subject_id = shh.subject_id
-                                WHERE 1=1
-                                AND (@subject_id IS NULL OR s.subject_id = NULLIF(@subject_id, ''))
-                                AND (@academic_year IS NULL OR shh.academic_year = NULLIF(@academic_year, ''))
-                                AND (@semester IS NULL OR shh.semester = NULLIF(@semester, ''))
-                                AND (@section IS NULL OR shh.section = NULLIF(@section, ''))
-                                AND (@teacher_code IS NULL OR @teacher_code = '' OR EXISTS (
-                                          SELECT 1 
-                                          FROM SubjectLecturer sl 
-                                          WHERE sl.sys_subject_no = shh.sys_subject_no 
-                                            AND sl.teacher_code = NULLIF(@teacher_code, '')
-                                            AND sl.active_status = 'active'
-                                      ))"
+                    { "total_score", @"
+                                                        SELECT
+                                                            ROUND(MAX(Total), 2) AS MAX_TOTAL,
+                                                            ROUND(MIN(Total), 2) AS MIN_TOTAL,
+									                        ROUND(CONVERT(DECIMAL(10,2), AVG(Total)), 2) AS AVG_TOTAL,
+                                                            ROUND(STDEV(Total), 2) AS STD_TOTAL,
+                                                            COUNT(ss.student_id) AS number_student
+                                                        FROM 
+                                                        (SELECT 
+                                                              sys_subject_no, 
+                                                              student_id,
+                                                              accumulated_score, 
+                                                              midterm_score, 
+                                                              final_score,
+								                               CASE 
+										                            WHEN accumulated_score IS NULL AND midterm_score IS NULL AND final_score IS NULL 
+										                            THEN NULL
+										                            ELSE ROUND(COALESCE(accumulated_score, 0) + COALESCE(midterm_score, 0) + COALESCE(final_score, 0), 2) 
+								                            END AS Total
+                                                          FROM SubjectScore
+                                                         WHERE active_status = 'active') ss
+                                                            JOIN 
+                                                            (SELECT 
+                                                                sh.sys_subject_no, 
+                                                                sh.subject_id, 
+                                                                yrs.byte_desc_th AS academic_year,
+                                                                sem.byte_desc_th AS semester, 
+                                                                sec.byte_desc_th AS section,
+					                                                     sh.active_status
+                                                            FROM SubjectHeader sh
+                                                            JOIN SystemParam yrs ON sh.academic_year = yrs.byte_code AND yrs.byte_reference = 'academic_year'
+                                                            JOIN SystemParam sem ON sh.semester = sem.byte_code AND sem.byte_reference = 'semester'
+                                                            JOIN SystemParam sec ON sh.section = sec.byte_code AND sec.byte_reference = 'section'
+				                                                     WHERE sh.active_status = 'active') shh
+                                                        ON ss.sys_subject_no = shh.sys_subject_no
+                                                        JOIN 
+                                                            (SELECT subject_id, subject_name 
+                                                            FROM Subject
+                                                            WHERE active_status = 'active') s
+                                                        ON s.subject_id = shh.subject_id
+														INNER JOIN (
+															  SELECT sys_subject_no, MIN(teacher_code) AS teacher_code
+															  FROM SubjectLecturer
+															  WHERE active_status = 'active'
+															  AND (@teacher_code IS NULL OR teacher_code = @teacher_code)
+															  GROUP BY sys_subject_no
+														  ) sl		
+														ON shh.sys_subject_no = sl.sys_subject_no
+                                                        WHERE 1=1
+                                                        AND (NULLIF(@subject_id, '') IS NULL OR s.subject_id = @subject_id)
+                                                        AND (NULLIF(@academic_year, '') IS NULL OR shh.academic_year = @academic_year)
+                                                        AND (NULLIF(@semester, '') IS NULL OR shh.semester = @semester)
+                                                        AND (NULLIF(@section, '') IS NULL OR shh.section = @section)
+			                                            --AND sl.active_status = 'active'
+			                                            AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
+				                                        --AND sl.teacher_code = NULLIF(@teacher_code, '')
+			                                            --GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section;"
                 }
             };
 
@@ -683,7 +711,8 @@ namespace ScoreManagement.Query.Dashboard
 					                             AND sl.active_status = 'active'
 					                             AND (NULLIF(@teacher_code, '') IS NULL OR sl.teacher_code = @teacher_code)
 						                            --AND sl.teacher_code = NULLIF(@teacher_code, '')
-					                            GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score;
+					                            GROUP BY s.subject_id, s.subject_name, shh.academic_year, shh.semester, shh.section, avg.avg_score
+                                                ORDER BY shh.academic_year DESC;
                 ";
 
                     using (var command = new SqlCommand(query, connection))
