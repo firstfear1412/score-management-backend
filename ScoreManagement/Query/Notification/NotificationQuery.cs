@@ -28,11 +28,12 @@ namespace ScoreManagement.Query
                                     INNER JOIN 
                                         NotificationTemplate t 
                                     ON 
-                                        n.template_id = t.template_id
+                                        n.template_id = t.template_id AND t.active_status = 'active'
                                     WHERE 
                                         n.username = @Username
+                                        AND n.active_status = 'active'
                                         AND DATEDIFF(DAY, n.create_date, GETDATE()) <= 30
-                                    ORDER BY create_date DESC";
+                                    ORDER BY n.update_date DESC";
 
             try
             {
