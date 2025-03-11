@@ -68,6 +68,7 @@ namespace ScoreManagement.Query
         public async Task<List<SubjectResponse>> GetSubject()
         {
             return await _context.Subjects.Where(x => x.active_status == "active")
+                .OrderByDescending(x => x.update_date)
                 .Select(x => new SubjectResponse
                 {
                     subject_id = x.subject_id,
