@@ -290,7 +290,7 @@ namespace ScoreManagement.Controllers
                             // 5. If email is sent successfully, update send_status to success
                             if (isSent)
                             {
-                                //await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 3);
+                                await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 3);
                                 //successCount++;
                                 Interlocked.Increment(ref successCount);
                             }
@@ -302,7 +302,7 @@ namespace ScoreManagement.Controllers
                         catch (Exception ex)
                         {
                             sendFailStudentDetails[studentId] = ex.Message;
-                            //await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 2, ex.Message);
+                            await _studentScoreQuery.UpdateSendEmail(resource.SubjectDetail!, studentId, resource.username, 2, ex.Message);
                             //failCount++;
                             Interlocked.Increment(ref failCount);
                             //message = ex.Message; // Store the error message
