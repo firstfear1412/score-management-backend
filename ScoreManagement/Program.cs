@@ -2,21 +2,109 @@ using ScoreManagement.Entity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using ScoreManagement.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Query;
+using ScoreManagement.Interfaces.Dashboard;
+using ScoreManagement.Query.Dashboard;
+using ScoreManagement.Interfaces.ExcelScore;
+using ScoreManagement.Query.ExcelScore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var env = builder.Environment;
+
+// Add CORS allow all origin
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:4200") // ระบุ origin ที่อนุญาต
+                  .AllowAnyHeader()   // อนุญาตให้ทุก header
+                  .AllowAnyMethod()   // อนุญาตให้ทุก HTTP method
+                  .AllowCredentials();  // อนุญาต credentials (cookies, authorization headers, etc.)
+        });
+});
+
+// add services Authentication and Authorization
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = configuration["JWT:Issuer"], // เปลี่ยนเป็น Issuer ของคุณ
+            ValidAudience = configuration["JWT:Issuer"], // เปลี่ยนเป็น Audience ของคุณ
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:PrivateKey"]!)) // ใส่ Secret Key ที่ปลอดภัย
+        };
+
+        // SignalR จะใช้ JWT token จาก query string หรือ header
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // ถ้าเชื่อมต่อผ่าน WebSocket หรือ SignalR, อ่าน token จาก query string
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+            //OnAuthenticationFailed = context =>
+            //{
+            //    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+            //    return Task.CompletedTask;
+            //},
+            //OnTokenValidated = context =>
+            //{
+            //    var claims = context.Principal.Claims.ToList();
+            //    Console.WriteLine($"Token validated successfully. Claims: {string.Join(", ", claims.Select(c => $"{c.Type}: {c.Value}"))}");
+            //    return Task.CompletedTask;
+            //},
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Custom policy สำหรับ role 1 (Admin)
+    options.AddPolicy("Admin", policy =>
+        policy.RequireClaim(ClaimTypes.Role, "1")); // mapping "role" -> ClaimTypes.Role อัตโนมัติ
+
+    // Custom policy สำหรับ role 2 (User)
+    options.AddPolicy("User", policy =>
+        policy.RequireClaim(ClaimTypes.Role, "2"));
+});
+
 // Add services to the container.
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.AllowTrailingCommas = true;
-    });
+    })
+    //.AddJsonOptions(options =>
+    //{
+    //    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    //})
+;
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
+
 // Add Swagger services with customized schema IDs
 builder.Services.AddSwaggerGen(c =>
 {
@@ -47,19 +135,19 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
                 {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[]{}
-                    }
-                });
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
     // Map IFormFile to a Swagger file schema
     c.MapType<IFormFile>(() => new Microsoft.OpenApi.Models.OpenApiSchema
     {
@@ -70,13 +158,21 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddTransient<IEncryptService, EncryptService>();
-
-//builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddTransient<IMailService, MailService>();
+builder.Services.AddTransient<IUtilityService, UtilityService>();
+builder.Services.AddTransient<IUserQuery, UserQuery>();
+builder.Services.AddTransient<IStudentScoreQuery, StudentScoreQuery>();
+builder.Services.AddTransient<IMasterDataQuery, MasterDataQuery>();
+builder.Services.AddTransient<ILovContantQuery, LovContantQuery>();
+builder.Services.AddTransient<ISystemParamQuery, SystemParamQeury>();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
+builder.Services.AddTransient<INotificationQuery, NotificationQuery>();
+builder.Services.AddTransient<IExcelScore, ExcelScoreQuery>();
 
-builder.Services.AddDbContext<demoDB>(options =>
+builder.Services.AddDbContext<scoreDB>(options =>
 {
-    options.UseSqlServer(configuration.GetConnectionString("DemoDB"));
+    options.UseSqlServer(configuration.GetConnectionString("scoreDb"));
 });
 
 var app = builder.Build();
@@ -104,7 +200,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();  // ตรวจสอบการยืนยันตัวตน
 app.UseAuthorization();
+
+// Use CORS policy
+app.UseCors("AllowSpecificOrigin");
+
+// Add signalIR Hub
+app.MapHub<NotificationHub>("/notifyHub");
+app.MapHub<ProgressHub>("/progressHub");
 
 app.MapControllers();
 

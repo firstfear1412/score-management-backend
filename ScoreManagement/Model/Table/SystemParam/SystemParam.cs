@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Table.SystemParam
+namespace ScoreManagement.Model.Table
 {
     public class SystemParam
     {

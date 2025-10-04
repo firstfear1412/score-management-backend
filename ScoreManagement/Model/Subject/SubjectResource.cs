@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace ScoreManagement.Model.Table.Subject
+﻿namespace ScoreManagement.Model
 {
     public class SubjectResource
     {
@@ -19,6 +17,9 @@ namespace ScoreManagement.Model.Table.Subject
         public DateTime? update_date { get; set; }
 
         public string? update_by { get; set; }
+        public string? subjectSearch { get; set; }
+        public string? teacher_code { get; set; }
+        public int? role { get; set; }
 
     }
 }

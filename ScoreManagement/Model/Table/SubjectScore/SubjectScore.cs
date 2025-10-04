@@ -1,9 +1,14 @@
-﻿namespace ScoreManagement.Model.Table.SubjectScore
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace ScoreManagement.Model.Table
 {
     public class SubjectScore
     {
-        public int row_id { get; set; }
+        [Key]
+        public int sys_subject_no { get; set; }
 
+        [Key]
         public string? subject_id { get; set; }
 
         public string? academic_year { get; set; }
@@ -12,11 +17,16 @@
 
         public string? student_id { get; set; }
 
-        public int? accumulated_score { get; set; }
+        public string? seat_no { get; set; }
 
-        public int? midterm_score { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? accumulated_score { get; set; }
 
-        public int? final_score { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? midterm_score { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? final_score { get; set; }
 
         public string? active_status { get; set; }
 

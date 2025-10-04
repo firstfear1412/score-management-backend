@@ -1,4 +1,4 @@
-﻿namespace ScoreManagement.Services.Encrypt
+﻿namespace ScoreManagement.Services
 {
     public interface IEncryptService
     {

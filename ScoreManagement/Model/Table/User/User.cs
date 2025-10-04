@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Table.User
+namespace ScoreManagement.Model.Table
 {
     public class User
     {
@@ -13,7 +13,7 @@ namespace ScoreManagement.Model.Table.User
 
         public int? role { get; set; }
 
-        public string? teacher_code { get; set; }
+        public string teacher_code { get; set; } = string.Empty;
 
         public string? prefix { get; set; }
 
@@ -33,5 +33,9 @@ namespace ScoreManagement.Model.Table.User
 
         public string? update_by { get; set; }
 
+        public string? prefix_description_th { get; set; }
+        public string? prefix_description_en { get; set; }
+        public string? role_description_th { get; set; }
+        public string? role_description_en { get; set; }
     }
 }

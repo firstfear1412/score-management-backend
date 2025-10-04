@@ -1,86 +1,69 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using ScoreManagement.Common;
+using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
-using ScoreManagement.Model.Table.User;
-using ScoreManagement.Model.User;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
+using ScoreManagement.Model.Table;
+using ScoreManagement.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ScoreManagement.Controllers
 {
     [Authorize]
-    [Route("api")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class UserController : Controller
+    public class UserController : BaseController
     {
-        private readonly demoDB _context;
+        private readonly scoreDB _context;
         private readonly IEncryptService _encryptService;
         private readonly IConfiguration _configuration;
-        public UserController(demoDB context, IEncryptService encryptService, IConfiguration configuration)
+        private readonly IUserQuery _userQuery;
+        public UserController(scoreDB context, IEncryptService encryptService, IConfiguration configuration, IUserQuery userQuery)
         {
             _context = context;
             _encryptService = encryptService;
             _configuration = configuration;
+            _userQuery = userQuery;
         }
         [AllowAnonymous]
         [HttpPost("GetToken")]
         public async Task<IActionResult> GetTokenControllers([FromBody] UserResource resource)
         {
-            var pathBase = HttpContext;
-            var message = string.Empty;
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
             object? tokenResult = null;
-            var isSuccess = false;
-            var ErrorMessage = new ErrorMessage();
+            bool isSuccess = false;
+            string sql = string.Empty;
             try
             {
 
                 if (!string.IsNullOrEmpty(resource.username) && !string.IsNullOrEmpty(resource.password))
                 {
                     bool flg = false;
-                    var users = await _context.Users.Where(a => a.username!.Equals(resource.username!)
-                                                                    && (a.active_status!.Equals("active"))
-                                                                    ).FirstOrDefaultAsync();
+                    var users = await _userQuery.GetUser(resource)!;
+
                     if (users != null)
                     {
-                        #region comment
-                        //if (users.role == 0)
-                        //{
-                        //    if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-                        //        resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-                        //    return StatusCode(200, resource.response);
-                        //}
-                        //if (users.total_failed >= 3 && users.date_login.Value.Date == DateTime.Now.Date)
-                        //{
-                        //    //ErrorMessage.Add("Your Account Has been Blocked !!");
-                        //    ErrorMessage.AddMessageFromStatusCode(409); //error : Your username is blocked. Please contact the staff. 
-                        //    if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-                        //        resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-                        //    return StatusCode(200, resource.response);
-                        //}
-                        #endregion comment
-                        flg = _encryptService.VerifyHashedPassword(users.password, resource.password);
+                        flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
                         if (flg)
                         {
-                            var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
-                            IConfigurationRoot configuration = builder.Build();
-
-                            string issuer = configuration["JWT:Issuer"];
-                            string privateKey = configuration["JWT:PrivateKey"];
-                            double MaxTokenHour = Convert.ToDouble(configuration["JWT:MaxTokenHour"]);
+                            string issuer = _configuration["JWT:Issuer"]!;
+                            string privateKey = _configuration["JWT:PrivateKey"]!;
+                            double MaxTokenHour = Convert.ToDouble(_configuration["JWT:MaxTokenHour"]!);
 
                             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(privateKey));
                             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
                             var claims = new[]
                             {
-                                 new Claim("user", resource.username),
-                                 new Claim("password", resource.password),
+                                 new Claim("username", resource.username),
+                                 new Claim("role", users.role.ToString()!),
+                                 //new Claim("password", resource.password),
                                  //new Claim("tokenType", "login"),
                             };
 
@@ -95,108 +78,259 @@ namespace ScoreManagement.Controllers
                             users.date_login = DateTime.Now;
                             users.update_date = DateTime.Now;
                             users.total_failed = 0;
+                            sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed ";
                             tokenResult = new
                             {
                                 token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                                //expiration = jwtToken.ValidTo
-                                expiration = DateTime.Now.AddHours(MaxTokenHour)
+                                expiration = jwtToken.ValidTo
                             };
                             isSuccess = true;
                             //message = string.Format("Token will expire : {0}", tokenResult.expiration);
                         }
                         else
                         {
-                            #region comment
-                            //int i = users.total_failed.Value;
-                            //if (users.date_login.Value.Date != DateTime.Now.Date)
-                            //{
-                            //    users.total_failed = 1;
-                            //    users.date_login = DateTime.Now;
-                            //    resource.response.totalLoginFailOfDay = users.total_failed.Value;
-                            //    //ErrorMessage.Add("Username / password is incorrect.");
-                            //    ErrorMessage.AddMessageFromStatusCode(408); //error : Your username / password is incorrect. You can only enter it incorrectly 3 times.
-                            //}
-                            //else if (users.date_login.Value.Date == DateTime.Now.Date && users.total_failed < 3)
-                            //{
-                            //    users.total_failed = i + 1;
-                            //    users.date_login = DateTime.Now;
-                            //    resource.response.totalLoginFailOfDay = users.total_failed.Value;
-                            //    ErrorMessage.AddMessageFromStatusCode(408); //error : Your username / password is incorrect. You can only enter it incorrectly 3 times.
-                            //}
-                            //else
-                            //{
-                            //    //ErrorMessage.Add("Your Account Has been Blocked !!");
-                            //    ErrorMessage.AddMessageFromStatusCode(409); //error : Your username is blocked. Please contact the staff. 
-                            //}
-                            #endregion comment
                             users.total_failed = users.total_failed + 1;
                             users.update_date = DateTime.Now;
-                            message = "password incorrect";
+                            sql = @" [total_failed] = @total_failed, [update_date] = @update_date ";
+                            //message = "password incorrect";
+                            messageKey = "login_failed";
+                            messageDesc = "Invalid Username or password. Please try again or contact admin.";
+                        }
+                        //update user login
+                        flg = await _userQuery.UpdateUser(users, sql);
+                    }
+                    else
+                    {
+                        //message = "user not found";
+                        messageKey = "login_user_not_found";
+                        messageDesc = "Invalid Username or password. Please try again or contact admin.";
+                    }
+
+                }
+                else
+                {
+                    //message = "input required";
+
+                    messageDesc = "field is required";
+                }
+
+                //_context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
+
+            if (!isSuccess)
+            {
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                tokenResult: tokenResult
+            );
+            return StatusCode(200, response);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("GetUserInfo")]
+        public async Task<IActionResult> GetUserInfoControllers([FromBody] UserResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? userInfo = null;  // Store user information here
+            bool isSuccess = false;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(resource.username))
+                {
+                    // Fetch user information from GetUserInfo
+                    var user = await _userQuery.GetUserInfo(resource); // Call GetUserInfo method to retrieve user data
+
+                    if (user != null)
+                    {
+                        userInfo = user;  // Store the user info object here
+                        isSuccess = true;
+                        messageKey = "login_success";
+                        messageDesc = "User data retrieved successfully.";
+                    }
+                    else
+                    {
+                        messageKey = "user_not_found";
+                        messageDesc = "User not found.";
+                    }
+                }
+                else
+                {
+                    messageDesc = "Username is required";
+                }
+            }
+            catch (Exception ex)
+            {
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
+            }
+
+            if (!isSuccess)
+            {
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+
+            // Respond with the user info or error message
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                objectResponse: userInfo
+            );
+
+            return StatusCode(200, response);
+        }
+
+
+        [AllowAnonymous]
+        [HttpPost("ChangePWD")]
+        public async Task<IActionResult> ChangePWDControllers([FromBody] UserResource resource)
+        {
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
+            string messageKey = string.Empty;
+            object? User = null;
+            bool isSuccess = false;
+            string sql = string.Empty;
+            string hashedPasswordBase64 = string.Empty;
+            try
+            {
+
+                if (!string.IsNullOrEmpty(resource.username) && !string.IsNullOrEmpty(resource.password))
+                {
+                    bool flg = false;
+                    var users = await _userQuery.GetUser(resource)!;
+                    if (users != null)
+                    {
+                        flg = _encryptService.VerifyHashedPassword(users.password!, resource.password);
+                        if (flg)
+                        {
+                            if (resource.password != resource.newPassword)
+                            {
+                                if (resource.newPassword == resource.conNewPassword)
+                                {
+                                    resource.newPassword = _encryptService.EncryptPassword(resource.newPassword!);
+                                    await _userQuery.updateUserByConditionQuery(resource)!;
+
+                                    users.date_login = DateTime.Now;
+                                    users.update_date = DateTime.Now;
+                                    users.update_by = resource.update_by;
+                                    users.total_failed = 0;
+                                    sql = @" [date_login] = @date_login, [update_date] = @update_date, [total_failed] = @total_failed , [update_by] = @update_by";
+                                    flg = await _userQuery.UpdateUser(users, sql);
+
+                                    isSuccess = true;
+                                    messageDesc = "Password has changed.";
+                                }
+                                else
+                                {
+                                    messageKey = "newpwd_mismatch";
+                                    messageDesc = "The new password and confirmation password must be the same.";
+                                }
+                            }
+                            else
+                            {
+                                messageKey = "newpwd_match_oldpwd";
+                                messageDesc = "The new password must not match the old password.";
+                            }
+                        }
+                        else
+                        {
+                            messageKey = "password_invaild";
+                            messageDesc = "Invalid password. Please try again or contact admin.";
+
                         }
                     }
                     else
                     {
-                        message = "user not found";
+                        messageKey = "password_invaild";
+                        messageDesc = "Invalid password. Please try again or contact admin.";
                     }
+
                 }
                 else
                 {
-                    message = "input required";
+                    messageDesc = "field is required";
                 }
-
-                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                //ErrorMessage.Add("Exception : " + ex.Message);
-                ////ErrorMessage.Add("There is a problem with the information, please contact the developer !");
-                ErrorMessage.WriteLog(resource.username, ErrorMessage.ErrorText.Trim(), ex, pathBase);
-                message = ex.Message;
+                _webEvent.WriteLogException(resource.username!, messageDesc.Trim(), ex, pathBase);
+                messageDesc = ex.Message;
             }
 
-            //if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
-            //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-            return StatusCode(200, new
+            if (!isSuccess)
             {
-                isSuccess = isSuccess,
-                message = message,
-                tokenResult = tokenResult
-            });
+                _webEvent.WriteLogInfo(resource.username!, messageDesc.Trim(), pathBase);
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageKey: messageKey,
+                messageDescription: messageDesc,
+                tokenResult: User
+            );
+            return StatusCode(200, response);
         }
 
         [AllowAnonymous]
-        [HttpPost("create/manual")]
-        public async Task<IActionResult> CreatUserManual([FromBody] User model)
+        [HttpPost("CreateManual")]
+        public IActionResult CreatUserManual([FromBody] User model)
         {
-
+            HttpContext pathBase = HttpContext;
+            string messageDesc = string.Empty;
             bool isSuccess = false;
-            string message = string.Empty;
             string hashedPasswordBase64 = string.Empty;
             try
             {
-                hashedPasswordBase64 = _encryptService.EncryptPassword(model.password);
+                hashedPasswordBase64 = _encryptService.EncryptPassword(model.password!);
                 if (!string.IsNullOrEmpty(hashedPasswordBase64))
                 {
                     isSuccess = true;
-                    message = "Password encoded successfully.";
+                    messageDesc = "Password encoded successfully.";
                 }
                 else
                 {
-                    message = "Password is empty or invalid.";
+                    messageDesc = "Password is empty or invalid.";
                 }
             }
             catch (Exception ex)
             {
                 isSuccess = false;
-                message = ex.Message.ToString();
+                messageDesc = ex.Message.ToString();
+                _webEvent.WriteLogException("CreateUserManual", messageDesc.Trim(), ex, pathBase);
             }
-            var response = new
-            {
-                isSuccess = isSuccess,
-                message = message,
-                hashedPassword = hashedPasswordBase64
-            };
-            return Ok(response);
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: messageDesc,
+                objectResponse: new { hashedPassword = hashedPasswordBase64 }
+            );
+            //จะ response
+            /*
+             {
+                  "isSuccess": true,
+                  "message": {
+                    "messageKey": "",
+                    "messageDescription": "Password encoded successfully."
+                  },
+                  "objectResponse": {
+                    "hashedPassword": "AGf9vEWj4/yBNtpkeGtB7SFT+cL+aIr5UKMsNbAAF2gjE4v3B9VBxpVOYdVKMW7FSA=="
+                  }
+             } 
+            */
+            return StatusCode(200, response);
         }
     }
 }

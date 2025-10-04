@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace ScoreManagement.Model.User
+﻿namespace ScoreManagement.Model
 {
     public class UserResource
     {
@@ -10,7 +8,9 @@ namespace ScoreManagement.Model.User
 
         public string? password { get; set; }
 
-        public int? role { get; set; }
+        public int? roleCode { get; set; }
+
+        public string? role { get; set; }
 
         public string? teacher_code { get; set; }
 
@@ -31,6 +31,13 @@ namespace ScoreManagement.Model.User
         public DateTime? update_date { get; set; }
 
         public string? update_by { get; set; }
+        public string? prefix_description_th { get; set; }
+        public string? prefix_description_en { get; set; }
+        public string? role_description_th { get; set; }
+        public string? role_description_en { get; set; }
+        public string? newPassword { get; set; }
+        public string? conNewPassword { get; set; }
+
 
     }
 }

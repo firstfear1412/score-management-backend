@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ScoreManagement.Model.Student
+namespace ScoreManagement.Model
 {
     public class StudentResource
     {

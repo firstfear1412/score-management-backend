@@ -1,37 +1,58 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using ScoreManagement.Controllers.Base;
 using ScoreManagement.Entity;
-using ScoreManagement.Model.Table.SystemParam;
-using ScoreManagement.Services.Encrypt;
+using ScoreManagement.Interfaces;
+using ScoreManagement.Model;
+using ScoreManagement.Model.Table;
 
 namespace ScoreManagement.Controllers
 {
-    [Route("api")]
+    [Authorize]
+    [Route("api/[controller]")]
     [ApiController]
-    public class MasterDataController : Controller
+    public class MasterDataController : BaseController
     {
-        private readonly demoDB _context;
-        public MasterDataController(demoDB context)
+        private readonly scoreDB _context;
+        private readonly IMasterDataQuery _masterDataQuery;
+        public MasterDataController(scoreDB context,IMasterDataQuery masterDataQuery)
         {
             _context = context;
+            _masterDataQuery = masterDataQuery;
         }
         [AllowAnonymous]
-        [HttpGet("lang")]
-        public async Task<IActionResult> GetLanguage()
+        [HttpGet("Language")]
+        public async Task<IActionResult> GetLanguage(string language)
         {
-            var translation = await _context.Languages.ToListAsync();
-
-            var result = new
+            bool isSuccess = false;
+            string message = string.Empty;
+            Dictionary<string, string> translation = new Dictionary<string, string>();
+            try
             {
-                en = translation.ToDictionary(t => t.message_key, t => t.message_en),
-                th = translation.ToDictionary(t => t.message_key, t => t.message_th),
-            };
-            return StatusCode(200, result);
+                translation = await _masterDataQuery.GetLanguage(language);
+                if(translation.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: translation
+            );
+            return StatusCode(200, response);
         }
 
-        [AllowAnonymous]
-        [HttpGet("param")]
+        //[AllowAnonymous]
+        [HttpGet("SystemParam")]
         public async Task<IActionResult> Masterdata(string reference)
         {
             List<SystemParam> lst = new List<SystemParam>();
@@ -39,8 +60,7 @@ namespace ScoreManagement.Controllers
             var isSuccess = false;
             try
             {
-                var data = await _context.SystemParams.Where(x => x.byte_reference.Equals(reference)
-                            ).ToListAsync();
+                List<SystemParam> data = await _masterDataQuery.GetSystemParams(reference);
                 if (data.Count > 0)
                 {
                     
@@ -67,13 +87,198 @@ namespace ScoreManagement.Controllers
 
             //if (!string.IsNullOrEmpty(ErrorMessage.ErrorText))
             //    resource.response.ErrorMessage.Add(ErrorMessage.ErrorText);
-            return StatusCode(200, new
-            {
-                isSuccess = isSuccess,
-                message = message,
-                data = lst
-            });
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: lst
+            );
+            return StatusCode(200, response);
         }
 
+        //[AllowAnonymous]
+        [HttpGet("EmailPlaceholder")]
+        public async Task<IActionResult> GetEmailPlaceholder()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<EmailPlaceholder> placeholders = new List<EmailPlaceholder>();
+            try
+            {
+                placeholders = await _masterDataQuery.GetEmailPlaceholder();
+                if (placeholders.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch(Exception ex)
+            {
+                message = ex.Message;
+            }
+            
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: placeholders
+            );
+            return StatusCode(200, response);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("EmailTemplate")]
+        public async Task<IActionResult> GetEmailTemplate(string username)
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            EmailTemplateGroup groupedTemplates = new EmailTemplateGroup();
+            try
+            {
+                List<EmailTemplate> templates = await _masterDataQuery.GetEmailTemplate(username);
+                if (templates.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+                Dictionary<string, int?> defaultTemplate = await _masterDataQuery.GetDefaultEmailTemplate(username);
+
+                groupedTemplates = new EmailTemplateGroup
+                {
+                    PrivateTemplates = templates
+                        .Where(x => x.is_private)
+                        .Select(x => new TemplateCollection
+                        {
+                            TemplateId = x.template_id,
+                            TemplateName = x.template_name,
+                            Detail = new TemplateDetail
+                            {
+                                Subject = x.subject,
+                                Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
+                            }
+                        }).ToList(),
+                    BasicTemplates = templates
+                        .Where(x => !x.is_private)
+                        .Select(x => new TemplateCollection
+                        {
+                            TemplateId = x.template_id,
+                            TemplateName = x.template_name,
+                            Detail = new TemplateDetail
+                            {
+                                Subject = x.subject,
+                                Body = x.body.Replace("\\n", "\n").Replace("\\t", "\t")
+                            }
+                        }).ToList(),
+                    DefaultTemplates = defaultTemplate
+                };
+            }
+            catch (Exception ex) {
+                message = ex.Message; 
+            }
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: groupedTemplates
+            );
+            return StatusCode(200, response);
+        }
+
+        //[AllowAnonymous]
+        [HttpGet("Subject")]
+        public async Task<IActionResult> GetSubject()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<SubjectResponse> subjects = new List<SubjectResponse>();
+            try
+            {
+                subjects = await _masterDataQuery.GetSubject();
+                if (subjects.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: subjects
+            );
+            return StatusCode(200, response);
+        }
+
+        [HttpGet("NotifyTemplate")]
+        public async Task<IActionResult> GetNotifyTemplate()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<NotificationTemplateResponse> templates = new List<NotificationTemplateResponse>();
+            try
+            {
+                templates = await _masterDataQuery.GetNotifyTemplate();
+                if (templates.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: templates
+            );
+            return StatusCode(200, response);
+        }
+
+        [HttpGet("Teacher")]
+        public async Task<IActionResult> GetTeacher()
+        {
+            bool isSuccess = false;
+            string message = string.Empty;
+            List<TeacherResponse> teachers = new List<TeacherResponse>();
+            try
+            {
+                teachers = await _masterDataQuery.GetTeacher();
+                if (teachers.Count > 0)
+                {
+                    isSuccess = true;
+                }
+                else
+                {
+                    message = "Data not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+            }
+
+            var response = ApiResponse(
+                isSuccess: isSuccess,
+                messageDescription: message,
+                objectResponse: teachers
+            );
+            return StatusCode(200, response);
+        }
     }
 }
